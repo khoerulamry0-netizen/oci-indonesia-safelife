@@ -6,6 +6,9 @@ let onlineRecords = [];
 let offlineState = 'loading';
 let onlineState = 'loading';
 const number = new Intl.NumberFormat('id-ID');
+const rupiah = new Intl.NumberFormat('id-ID', {
+  style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
+});
 const date = new Intl.DateTimeFormat('id-ID', {
   day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
 });
@@ -55,7 +58,7 @@ function expiryCell(row, record) {
 
 function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
-    ? 'Google Sheets Â· Online'
+    ? 'Google Sheets Â· Online + Master Cost'
     : 'Google Sheets Â· CLUSTERING OFFLINE';
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
@@ -74,7 +77,7 @@ function draw() {
     if (channel === 'Online' && onlineState === 'loading') label = 'Memuat stok Online dari Google Sheetsâ€¦';
     if (channel === 'Online' && onlineState === 'error') label = 'Data Online belum bisa dimuat. Muat ulang halaman untuk mencoba lagi.';
     const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 7;
+    message.colSpan = 8;
   }
 
   for (const record of visible) {
@@ -87,6 +90,8 @@ function draw() {
     product.append(title, sku);
     cell(row, record.channel);
     cell(row, number.format(record.stock), 'numeric');
+    cell(row, channel === 'Online' && record.productCost !== null && record.productCost !== undefined
+      ? rupiah.format(record.productCost) : 'â€”', 'numeric');
     cell(row, record.averageMonthlySales === null ? 'â€”' : number.format(Math.round(record.averageMonthlySales)), 'numeric');
     expiryCell(row, record);
     cell(row, record.risk === null ? 'â€”' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
@@ -136,7 +141,8 @@ async function refreshOnline() {
     if (!response.ok) throw new Error('Feed unavailable');
     const rows = await response.json();
     onlineRecords = rows.map(row => ({
-      ...row, channel:'Online', expiries:row.expiries.map(e => ({...e, date:new Date(e.date + 'T00:00:00Z')}))
+      ...row, channel:'Online', productCost: row.productCost == null ? null : Number(row.productCost),
+      expiries:row.expiries.map(e => ({...e, date:new Date(e.date + 'T00:00:00Z')}))
     }));
     onlineState = 'ready';
   } catch (error) {
