@@ -15,6 +15,9 @@ const date = new Intl.DateTimeFormat('id-ID', {
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
+const priorityRows = document.getElementById('priority-rows');
+const urgencyFilter = document.getElementById('urgency-filter');
+const prioritySort = document.getElementById('priority-sort');
 let channel = 'Online';
 
 function cell(row, value, className = '') {
@@ -30,6 +33,59 @@ function statusOf(record) {
   if (record.incomplete) return ['Data sales belum lengkap', 'missing'];
   if (record.daysLeft === null) return ['Tidak ada ED', 'no-date'];
   return record.risk > 0 ? ['Berisiko expired', 'at-risk'] : ['Tidak ada estimasi risiko', 'clear'];
+}
+
+function pricedRiskValue(record) {
+  return Number.isFinite(record.risk) && Number.isFinite(record.productCost)
+    ? record.risk * record.productCost : null;
+}
+
+function marketingAction(record) {
+  if (record.daysLeft !== null && record.daysLeft <= 30) return ['Promo segera', 'priority-urgent', 'Clearance / flash sale'];
+  if (record.daysLeft !== null && record.daysLeft <= 60) return ['Prioritas tinggi', 'priority-high', 'Bundle / push campaign'];
+  if (record.daysLeft !== null && record.daysLeft <= 90) return ['Prioritas promo', 'priority-medium', 'Masukkan campaign'];
+  return ['Campaign terjadwal', 'priority-medium', 'Masukkan kalender promo'];
+}
+
+function drawPriorities(visible) {
+  const maxDays = urgencyFilter.value ? Number(urgencyFilter.value) : null;
+  const candidates = visible
+    .filter(record => record.risk > 0 && pricedRiskValue(record) !== null)
+    .filter(record => maxDays === null || (record.daysLeft !== null && record.daysLeft <= maxDays))
+    .sort((a, b) => {
+      if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
+      if (prioritySort.value === 'qty') return b.risk - a.risk;
+      return pricedRiskValue(b) - pricedRiskValue(a);
+    })
+    .slice(0, 10);
+  priorityRows.replaceChildren();
+  if (!candidates.length) {
+    const message = cell(priorityRows.insertRow(), 'Belum ada produk prioritas pada filter ini.', 'empty');
+    message.colSpan = 6;
+    return;
+  }
+  for (const record of candidates) {
+    const row = priorityRows.insertRow();
+    const product = cell(row, '', 'product');
+    const title = document.createElement('strong');
+    title.textContent = record.name;
+    const sku = document.createElement('small');
+    sku.textContent = record.sku;
+    product.append(title, sku);
+    const expiry = record.expiries[0];
+    cell(row, expiry ? date.format(expiry.date) + ' Â· ' + number.format(record.daysLeft) + ' hari' : 'â€”');
+    cell(row, number.format(record.risk), 'numeric risk-value');
+    cell(row, rupiah.format(pricedRiskValue(record)), 'numeric risk-value');
+    cell(row, Number.isFinite(record.averageMonthlySales) ? number.format(Math.round(record.averageMonthlySales)) : 'â€”', 'numeric');
+    const [label, statusClass, action] = marketingAction(record);
+    const actionCell = cell(row, '');
+    const badge = document.createElement('span');
+    badge.className = 'priority-status ' + statusClass;
+    badge.textContent = label;
+    const detail = document.createElement('small');
+    detail.textContent = action;
+    actionCell.append(badge, detail);
+  }
 }
 
 function appendExpiry(list, label, qty, days) {
@@ -63,14 +119,15 @@ function draw() {
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
   const knownRisk = visible.filter(record => record.risk !== null);
-  const pricedRisk = visible.filter(record => Number.isFinite(record.risk) && Number.isFinite(record.productCost));
-  const totalRiskValue = pricedRisk.reduce((total, record) => total + record.risk * record.productCost, 0);
+  const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
+  const totalRiskValue = pricedRisk.reduce((total, record) => total + pricedRiskValue(record), 0);
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? rupiah.format(totalRiskValue) : '\u2014';
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = number.format(visible.length) + ' hasil';
+  drawPriorities(visible);
   tableRows.replaceChildren();
 
   if (!visible.length) {
@@ -85,8 +142,7 @@ function draw() {
 
   for (const record of visible) {
     const row = tableRows.insertRow();
-    const riskValue = Number.isFinite(record.risk) && Number.isFinite(record.productCost)
-      ? record.risk * record.productCost : null;
+    const riskValue = pricedRiskValue(record);
     const product = cell(row, '', 'product');
     const title = document.createElement('strong');
     title.textContent = record.name;
@@ -122,6 +178,8 @@ for (const button of filterButtons) {
   });
 }
 riskFilter.addEventListener('change', draw);
+urgencyFilter.addEventListener('change', draw);
+prioritySort.addEventListener('change', draw);
 search.addEventListener('input', draw);
 draw();
 
