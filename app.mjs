@@ -51,7 +51,7 @@ function expiryCell(row, record) {
 }
 
 function draw() {
-  document.getElementById('source-label').textContent = channel === 'Online' ? 'Google Sheets · Online' : 'Data contoh · Offline';
+  document.getElementById('source-label').textContent = channel === 'Online' ? 'Google Sheets · Online' : 'Penjualan bulanan · Offline';
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
   const knownRisk = visible.filter(record => record.risk !== null);
@@ -67,7 +67,7 @@ function draw() {
     if (channel === 'Online' && onlineState === 'loading') label = 'Memuat stok Online dari Google Sheets…';
     if (channel === 'Online' && onlineState === 'error') label = 'Data Online belum bisa dimuat. Muat ulang halaman untuk mencoba lagi.';
     const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 6;
+    message.colSpan = 7;
   }
 
   for (const record of visible) {
@@ -80,6 +80,7 @@ function draw() {
     product.append(title, sku);
     cell(row, record.channel);
     cell(row, number.format(record.stock), 'numeric');
+    cell(row, record.averageMonthlySales === null ? '—' : number.format(Math.round(record.averageMonthlySales)), 'numeric');
     expiryCell(row, record);
     cell(row, record.risk === null ? '—' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
     const [label, statusClass] = statusOf(record);
