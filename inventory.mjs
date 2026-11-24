@@ -13,18 +13,23 @@ const examples = [
   { sku: 'ON-102', name: 'Hydrating Gel Cleanser', channel: 'Online', batches: [[38, 325]], sales: [33, 35, 36, null, 40, null, 39, 35, 41, null, null, null, null] },
   { sku: 'ON-103', name: 'Calming Sheet Mask', channel: 'Online', batches: [[63, 420]], sales: [48, 53, 56, 61, 58, 54, 52, 51, 57, 63, 55, 62, 48] },
   { sku: 'ON-104', name: 'Lip Balm Unscented', channel: 'Online', batches: [[null, 76]], sales: [4, 0, 5, 6, 5, 7, 5, 5, 6, 4, 5, 4, 6] },
-  { sku: 'OF-201', name: 'Brightening Body Lotion', channel: 'Offline', batches: [[21, 210], [66, 410]], sales: [145, 168, 155] },
-  { sku: 'OF-202', name: 'Barrier Repair Cream', channel: 'Offline', batches: [[48, 108], [84, 96]], sales: [246, 239, 252] },
-  { sku: 'OF-203', name: 'Micellar Water 100 ml', channel: 'Offline', batches: [[25, 120]], sales: [0, 0, 0] },
-  { sku: 'OF-204', name: 'Gentle Facial Toner', channel: 'Offline', batches: [[55, 160]], sales: [88, null, 98] },
+  { sku: 'OF-201', name: 'Brightening Body Lotion', channel: 'Offline', batches: [[21, 210], [66, 410]], monthlySales: [145, 168, 155, 172, 160, 180] },
+  { sku: 'OF-202', name: 'Barrier Repair Cream', channel: 'Offline', batches: [[48, 108], [84, 96]], monthlySales: [246, 239, 252, 241, 258, 249] },
+  { sku: 'OF-203', name: 'Micellar Water 100 ml', channel: 'Offline', batches: [[25, 120]], monthlySales: [0, 0, 0, 0, 0, 0] },
+  { sku: 'OF-204', name: 'Gentle Facial Toner', channel: 'Offline', batches: [[55, 160]], monthlySales: [88, 94, null, 98, 91, 102] },
 ];
 
-function weeklyAverage(channel, sales) {
-  const periods = channel === 'Online' ? 13 : 3;
-  const recent = sales.slice(-periods);
-  if (recent.length !== periods || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
-  const average = recent.reduce((sum, value) => sum + value, 0) / periods;
-  return channel === 'Online' ? average : average * 12 / 52;
+function salesMetrics(product) {
+  if (product.channel === 'Offline') {
+    const recent = product.monthlySales.slice(-6);
+    if (recent.length !== 6 || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
+    const averageMonthly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
+    return { weekly: averageMonthly * 12 / 52, monthly: averageMonthly };
+  }
+  const recent = product.sales.slice(-13);
+  if (recent.length !== 13 || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
+  const averageWeekly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
+  return { weekly: averageWeekly, monthly: averageWeekly * 52 / 12 };
 }
 
 export function summarize(product, today) {
@@ -39,20 +44,21 @@ export function summarize(product, today) {
   }
   const dated = [...quantitiesByDay].sort((a, b) => a[0] - b[0]);
   const daysLeft = dated[0]?.[0] ?? null;
-  const average = weeklyAverage(product.channel, product.sales);
-  const incomplete = average === null;
+  const sales = salesMetrics(product);
+  const incomplete = sales === null;
   let risk = null;
   if (!incomplete && daysLeft !== null) {
     let cumulative = 0;
     let biggestShortfall = 0;
     for (const [days, qty] of dated) {
       cumulative += qty;
-      biggestShortfall = Math.max(biggestShortfall, cumulative - average * days / 7);
+      biggestShortfall = Math.max(biggestShortfall, cumulative - sales.weekly * days / 7);
     }
     risk = Math.ceil(biggestShortfall);
   }
   return {
     ...product, stock, daysLeft, incomplete, risk, undatedStock,
+    averageMonthlySales: sales?.monthly ?? null,
     expiries: dated.map(([days, qty]) => ({ days, qty, date: new Date(today + days * dayMs) })),
   };
 }
