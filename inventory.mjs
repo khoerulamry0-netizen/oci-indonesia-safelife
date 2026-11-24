@@ -38,11 +38,12 @@ function salesMetrics(product) {
   if (product.channel === 'Offline') {
     if (recent.length !== 6 || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
     const averageMonthly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
-    return { weekly: averageMonthly * 12 / 52, monthly: averageMonthly };
+    const weekly = averageMonthly * 12 / 52;
+    return { daily: weekly / 7, weekly, monthly: averageMonthly };
   }
   if (recent.length !== 13 || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
   const averageWeekly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
-  return { weekly: averageWeekly, monthly: averageWeekly * 52 / 12 };
+  return { daily: averageWeekly / 7, weekly: averageWeekly, monthly: averageWeekly * 52 / 12 };
 }
 
 export function summarize(product, today = jakartaDay()) {
@@ -72,6 +73,8 @@ export function summarize(product, today = jakartaDay()) {
   return {
     ...product, stock, daysLeft, incomplete, risk, undatedStock,
     averageMonthlySales: sales?.monthly ?? null,
+    averageWeeklySales: sales?.weekly ?? null,
+    averageDailySales: sales?.daily ?? null,
     expiries: dated.map(([days, qty]) => ({ days, qty, date: new Date(today + days * dayMs) })),
   };
 }
