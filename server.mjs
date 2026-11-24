@@ -11,6 +11,7 @@ const spreadsheetId = '1RpLHOzhQd58zO2NvIoubybaHiXNavWGczVOa5fzS-m0';
 const clusteringOfflineGid = '211915398';
 const monthlySalesGid = '953675285';
 const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
+const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
 const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
@@ -137,6 +138,22 @@ function buildMasterCostMap(rows) {
   return costs;
 }
 
+function buildOnlineAverageMap(rows) {
+  const headerIndex = findHeader(rows, ['SKU', 'Avg / minggu (pcs)']);
+  if (headerIndex < 0) throw new Error('SWC Online headers not found');
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU');
+  const weeklyIndex = columnIndex(header, 'Avg / minggu (pcs)');
+  const averages = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = String(row[skuIndex] ?? '').trim();
+    if (!sku || averages.has(sku)) continue;
+    const weekly = parseNumber(row[weeklyIndex]);
+    if (Number.isFinite(weekly) && weekly >= 0) averages.set(sku, weekly);
+  }
+  return averages;
+}
+
 function buildOfflineRecords(clusteringRows, salesRows) {
   const clusterHeaderIndex = findHeader(clusteringRows, ['SKU ID', 'Nama Barang', 'Kedaluwarsa']);
   if (clusterHeaderIndex < 0) throw new Error('Clustering Offline headers not found');
@@ -208,11 +225,18 @@ function buildOfflineRecords(clusteringRows, salesRows) {
 
 async function offlineData(res) {
   try {
-    const [clusteringRows, salesRows] = await Promise.all([
+    const [clusteringRows, salesRows, costRows] = await Promise.all([
       fetchCsv(clusteringOfflineGid),
       fetchCsv(monthlySalesGid),
+      fetchCsv(masterCostGid, onlineSpreadsheetId),
     ]);
-    send(res, 200, JSON.stringify(buildOfflineRecords(clusteringRows, salesRows)), 'application/json; charset=utf-8');
+    const payload = buildOfflineRecords(clusteringRows, salesRows);
+    const costs = buildMasterCostMap(costRows);
+    payload.records = payload.records.map(row => ({
+      ...row,
+      productCost: costs.get(row.sku) ?? null,
+    }));
+    send(res, 200, JSON.stringify(payload), 'application/json; charset=utf-8');
   } catch (error) {
     console.error('offline data sync failed:', error.message);
     send(res, 502, JSON.stringify({ error: 'Offline Google Sheets synchronization failed' }), 'application/json; charset=utf-8');
@@ -221,17 +245,21 @@ async function offlineData(res) {
 
 async function proxyOnline(res) {
   try {
-    const [response, costRows] = await Promise.all([
+    const [response, costRows, summaryRows] = await Promise.all([
       fetch(upstream, { headers: { accept: 'application/json' } }),
       fetchCsv(masterCostGid, onlineSpreadsheetId),
+      fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
     ]);
     if (!response.ok) throw new Error('Upstream returned ' + response.status);
     const rows = JSON.parse(await response.text());
     if (!Array.isArray(rows)) throw new Error('Online data returned invalid JSON');
     const costs = buildMasterCostMap(costRows);
+    const averages = buildOnlineAverageMap(summaryRows);
     const enriched = rows.map(row => ({
       ...row,
       productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
+      averageMonthlySales: averages.has(String(row.sku ?? '').trim())
+        ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
     }));
     send(res, 200, JSON.stringify(enriched), 'application/json; charset=utf-8');
   } catch (error) {
