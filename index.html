@@ -17,12 +17,6 @@
     </div>
   </header>
   <main class="wrap">
-    <nav class="view-nav" aria-label="Primary navigation" data-i18n-aria="primary_navigation">
-      <button type="button" class="view-nav-button" data-view="dashboard" aria-selected="true" data-i18n="dashboard">Dashboard</button>
-      <button type="button" class="view-nav-button" data-view="inventory" aria-selected="false" data-i18n="inventory">Inventory</button>
-    </nav>
-    <section id="dashboard-view" class="view-section" aria-labelledby="dashboard-view-title">
-      <h2 id="dashboard-view-title" class="sr-only" data-i18n="dashboard">Dashboard</h2>
       <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
         <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
         <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
@@ -30,50 +24,7 @@
         <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
         <article class="stat missing-stat"><span data-i18n="incomplete_sales">Data sales belum lengkap</span><strong id="missing-count">0</strong><small data-i18n="sku_per_channel">SKU per channel</small></article>
       </section>
-      <section class="priority-panel" aria-labelledby="priority-title">
-        <div class="priority-head">
-          <div><h2 id="priority-title" data-i18n="priority_title">Top 10 Prioritas Promo</h2><p data-i18n="priority_description">Produk dengan risiko expired dan nilai modal terbesar untuk ditindaklanjuti marketing.</p></div>
-          <div class="priority-controls">
-            <label class="risk-picker"><span data-i18n="expiry_urgency">Urgensi ED</span>
-              <select id="urgency-filter">
-                <option value="" data-i18n="all_expiry">Semua ED</option>
-                <option value="30" data-i18n="within_30_days">≤ 30 hari</option>
-                <option value="60" data-i18n="within_60_days">≤ 60 hari</option>
-                <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
-              </select>
-            </label>
-            <label class="risk-picker"><span data-i18n="sort_by">Urutkan</span>
-              <select id="priority-sort">
-                <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
-                <option value="days" data-i18n="sort_days">ED terdekat</option>
-                <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
-              </select>
-            </label>
-            <label class="risk-picker"><span data-i18n="pareto">Pareto</span>
-              <select id="pareto-filter">
-                <option value="" data-i18n="all_status">Semua status</option>
-                <option value="Pareto 80%" data-i18n="pareto_80">Pareto 80%</option>
-                <option value="Non Pareto" data-i18n="non_pareto">Non Pareto</option>
-                <option value="Tidak ada penjualan" data-i18n="no_sales">Tidak ada penjualan</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div class="pareto-summary" id="pareto-summary" aria-live="polite">
-          <div class="pareto-summary-head"><strong data-i18n="pareto_summary_title">Pareto nilai risiko</strong><span id="pareto-summary-label">—</span></div>
-          <div class="pareto-bar" role="img" aria-label="Ringkasan Pareto"><span id="pareto-bar-core"></span><span id="pareto-bar-rest"></span></div>
-          <small data-i18n="pareto_summary_description">Bagian hijau menunjukkan porsi nilai risiko yang berasal dari SKU prioritas Pareto.</small>
-        </div>
-        <div class="priority-table-wrap" tabindex="0" role="region" aria-label="Top 10 prioritas promo">
-          <table class="priority-table">
-            <thead><tr><th scope="col" data-i18n="product_sku">Produk / SKU</th><th scope="col" data-i18n="pareto">Pareto</th><th scope="col" data-i18n="nearest_expiry">ED terdekat</th><th scope="col" class="numeric" data-i18n="risk_qty">Qty risiko</th><th scope="col" class="numeric" data-i18n="risk_value">Modal risiko</th><th scope="col" class="numeric" data-i18n="monthly_sales">Sales / bulan</th><th scope="col" data-i18n="recommended_action">Rekomendasi aksi</th></tr></thead>
-            <tbody id="priority-rows"></tbody>
-          </table>
-        </div>
-      </section>
-    </section>
-    <section id="inventory-view" class="view-section" aria-labelledby="inventory-title" hidden>
-      <section class="inventory">
+    <section class="inventory" aria-labelledby="inventory-title">
         <div class="inventory-head">
           <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
           <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
@@ -92,6 +43,29 @@
               <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
             </select>
           </label>
+          <label class="risk-picker"><span data-i18n="expiry_urgency">Urgensi ED</span>
+            <select id="urgency-filter">
+              <option value="" data-i18n="all_expiry">Semua ED</option>
+              <option value="30" data-i18n="within_30_days">≤ 30 hari</option>
+              <option value="60" data-i18n="within_60_days">≤ 60 hari</option>
+              <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
+            </select>
+          </label>
+          <label class="risk-picker"><span data-i18n="pareto">Pareto</span>
+            <select id="pareto-filter">
+              <option value="" data-i18n="all_status">Semua status</option>
+              <option value="Pareto 80%" data-i18n="pareto_80">Pareto 80%</option>
+              <option value="Non Pareto" data-i18n="non_pareto">Non Pareto</option>
+              <option value="Tidak ada penjualan" data-i18n="no_sales">Tidak ada penjualan</option>
+            </select>
+          </label>
+          <label class="risk-picker"><span data-i18n="sort_by">Urutkan</span>
+            <select id="priority-sort">
+              <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
+              <option value="days" data-i18n="sort_days">ED terdekat</option>
+              <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
+            </select>
+          </label>
           <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
           <span id="result-count" role="status"></span>
         </div>
@@ -101,7 +75,6 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
-      </section>
     </section>
     <details class="method">
       <summary data-i18n="method_title">Cara estimasi risiko expired</summary>

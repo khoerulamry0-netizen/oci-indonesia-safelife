@@ -221,7 +221,6 @@ let lastSyncAt = null;
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
-const priorityRows = document.getElementById('priority-rows');
 const urgencyFilter = document.getElementById('urgency-filter');
 const prioritySort = document.getElementById('priority-sort');
 const paretoFilter = document.getElementById('pareto-filter');
@@ -231,25 +230,7 @@ const languageButtons = {
   id: document.getElementById('language-id'),
   en: document.getElementById('language-en'),
 };
-const viewButtons = [...document.querySelectorAll('[data-view]')];
-const views = {
-  dashboard: document.getElementById('dashboard-view'),
-  inventory: document.getElementById('inventory-view'),
-};
-let activeView = 'dashboard';
 let channel = 'Online';
-
-function setView(nextView) {
-  if (!views[nextView]) return;
-  activeView = nextView;
-  for (const button of viewButtons) {
-    const selected = button.dataset.view === activeView;
-    button.setAttribute('aria-selected', String(selected));
-  }
-  for (const [viewName, element] of Object.entries(views)) {
-    element.hidden = viewName !== activeView;
-  }
-}
 
 function cell(row, value, className = '') {
   const td = row.insertCell();
@@ -277,13 +258,6 @@ function salesFormat(value) {
 
 function stockCoverFormat(value) {
   return Number.isFinite(value) && value >= 0 ? salesNumber.format(value) : '—';
-}
-
-function marketingAction(record) {
-  if (record.daysLeft !== null && record.daysLeft <= 30) return [t('promo_now'), 'priority-urgent', t('promo_now_detail')];
-  if (record.daysLeft !== null && record.daysLeft <= 60) return [t('high_priority'), 'priority-high', t('high_priority_detail')];
-  if (record.daysLeft !== null && record.daysLeft <= 90) return [t('promo_priority'), 'priority-medium', t('promo_priority_detail')];
-  return [t('scheduled_campaign'), 'priority-medium', t('scheduled_campaign_detail')];
 }
 
 function channelLabel(value) {
@@ -327,7 +301,6 @@ function applyLanguage() {
   }
   search.placeholder = t('search_placeholder');
   document.querySelector('.filters').setAttribute('aria-label', t('channel'));
-  document.querySelector('.priority-table-wrap').setAttribute('aria-label', t('priority_title'));
   document.querySelector('.table-wrap').setAttribute('aria-label', t('inventory_title'));
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
@@ -335,8 +308,15 @@ function applyLanguage() {
 }
 
 function visibleRecords() {
-  return filterPortfolio(records, channel, search.value)
-    .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
+  const visible = filterPortfolio(records, channel, search.value)
+    .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value)
+    .filter(record => !urgencyFilter.value || (record.daysLeft !== null && record.daysLeft <= Number(urgencyFilter.value)))
+    .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
+  return visible.sort((a, b) => {
+    if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
+    if (prioritySort.value === 'qty') return (b.risk ?? -Infinity) - (a.risk ?? -Infinity);
+    return (pricedRiskValue(b) ?? -Infinity) - (pricedRiskValue(a) ?? -Infinity);
+  });
 }
 
 function expiryText(record) {
@@ -392,82 +372,6 @@ function exportExcelFile() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function drawParetoSummary(visible) {
-  const candidates = visible
-    .map(record => ({ record, value: pricedRiskValue(record) }))
-    .filter(item => item.record.risk > 0 && Number.isFinite(item.value) && item.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const total = candidates.reduce((sum, item) => sum + item.value, 0);
-  let running = 0;
-  let coreValue = 0;
-  let coreCount = 0;
-  for (const item of candidates) {
-    running += item.value;
-    if (coreCount === 0 || running - item.value < total * 0.8) {
-      coreValue += item.value;
-      coreCount += 1;
-    }
-  }
-  const percentage = total > 0 ? Math.min(100, coreValue / total * 100) : 0;
-  document.getElementById('pareto-summary-label').textContent = total > 0
-    ? t('pareto_value_label')
-      .replace('{count}', number.format(coreCount))
-      .replace('{percent}', salesNumber.format(percentage))
-    : '—';
-  document.getElementById('pareto-bar-core').style.width = percentage + '%';
-  document.getElementById('pareto-bar-rest').style.width = (100 - percentage) + '%';
-}
-
-function drawPriorities(visible) {
-  const maxDays = urgencyFilter.value ? Number(urgencyFilter.value) : null;
-  const candidates = visible
-    .filter(record => record.risk > 0 && pricedRiskValue(record) !== null)
-    .filter(record => maxDays === null || (record.daysLeft !== null && record.daysLeft <= maxDays))
-    .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value)
-    .sort((a, b) => {
-      if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
-      if (prioritySort.value === 'qty') return b.risk - a.risk;
-      return pricedRiskValue(b) - pricedRiskValue(a);
-    })
-    .slice(0, 10);
-  priorityRows.replaceChildren();
-  if (!candidates.length) {
-    const message = cell(priorityRows.insertRow(), t('no_priority'), 'empty');
-    message.colSpan = 7;
-    return;
-  }
-  for (const record of candidates) {
-    const row = priorityRows.insertRow();
-    const product = cell(row, '', 'product');
-    const title = document.createElement('strong');
-    title.textContent = record.name;
-    const sku = document.createElement('small');
-    sku.textContent = record.sku;
-    product.append(title, sku);
-    const paretoCell = cell(row, '');
-    const paretoBadge = document.createElement('span');
-    const paretoClass = record.paretoStatus === 'Pareto 80%'
-      ? 'priority-pareto'
-      : record.paretoStatus === 'Tidak ada penjualan' ? 'priority-no-sales' : 'priority-non-pareto';
-    paretoBadge.className = 'priority-status ' + paretoClass;
-    paretoBadge.textContent = paretoLabel(record.paretoStatus);
-    paretoCell.append(paretoBadge);
-    const expiry = record.expiries[0];
-    cell(row, expiry ? date.format(expiry.date) + ' \u00b7 ' + number.format(record.daysLeft) + ' ' + t('days_left') : '\u2014');
-    cell(row, number.format(record.risk), 'numeric risk-value');
-    cell(row, rupiah.format(pricedRiskValue(record)), 'numeric risk-value');
-    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
-    const [label, statusClass, action] = marketingAction(record);
-    const actionCell = cell(row, '');
-    const badge = document.createElement('span');
-    badge.className = 'priority-status ' + statusClass;
-    badge.textContent = label;
-    const detail = document.createElement('small');
-    detail.textContent = action;
-    actionCell.append(badge, detail);
-  }
-}
-
 function appendExpiry(list, label, qty, days) {
   const entry = document.createElement('li');
   const dateLabel = document.createElement('strong');
@@ -496,10 +400,6 @@ function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
     ? t('online_source')
     : t('offline_source');
-  const priorityPanel = document.querySelector('.priority-panel');
-  const searchActive = search.value.trim().length > 0;
-  priorityPanel.hidden = searchActive;
-  priorityPanel.setAttribute('aria-hidden', String(searchActive));
   const visible = visibleRecords();
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
@@ -512,15 +412,6 @@ function draw() {
   document.getElementById('urgent-count').textContent = number.format(urgent.length);
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
-  if (searchActive) {
-    priorityRows.replaceChildren();
-    document.getElementById('pareto-summary-label').textContent = '—';
-    document.getElementById('pareto-bar-core').style.width = '0%';
-    document.getElementById('pareto-bar-rest').style.width = '100%';
-  } else {
-    drawParetoSummary(visible);
-    drawPriorities(visible);
-  }
   tableRows.replaceChildren();
 
   if (!visible.length) {
@@ -573,10 +464,6 @@ for (const button of filterButtons) {
   });
 }
 
-for (const button of viewButtons) {
-  button.addEventListener('click', () => setView(button.dataset.view));
-}
-
 for (const [nextLocale, button] of Object.entries(languageButtons)) {
   button.addEventListener('click', () => {
     locale = nextLocale;
@@ -592,7 +479,6 @@ prioritySort.addEventListener('change', draw);
 paretoFilter.addEventListener('change', draw);
 search.addEventListener('input', draw);
 exportExcelButton.addEventListener('click', exportExcelFile);
-setView(activeView);
 applyLanguage();
 draw();
 
