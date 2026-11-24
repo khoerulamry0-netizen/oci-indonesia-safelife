@@ -38,7 +38,7 @@ h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.
 .stat strong { font-size: 2rem; letter-spacing: -.05em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .stat small { color: var(--muted); font-size: .8rem; }
 .risk-stat strong { color: #aa341f; }
-.risk-value-stat strong { color: #8a4f0b; }
+.risk-value-stat strong { color: #8a4f0b; font-size: 1.65rem; letter-spacing: -.06em; white-space: nowrap; }
 .missing-stat strong { color: #865507; }
 .urgency-stat strong { color: #9a3c28; }
 .priority-panel { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
