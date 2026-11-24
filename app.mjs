@@ -2,7 +2,7 @@ import { filterPortfolio, portfolio } from './inventory.mjs';
 
 const translations = {
   id: {
-    title: 'OCI Marketing Control Tower',
+    title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Pantau stok, risiko expired, dan peluang promosi berbasis data.',
     dashboard: 'Dashboard',
     inventory: 'Stok & inventori',
@@ -122,7 +122,7 @@ const translations = {
     sync_issue: 'Sinkronisasi perlu diperiksa',
   },
   en: {
-    title: 'OCI Marketing Control Tower',
+    title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Monitor inventory, expiry risk, and data-driven promotion opportunities.',
     dashboard: 'Dashboard',
     inventory: 'Inventory',
@@ -558,8 +558,8 @@ function exportExcelFile() {
   });
   const headerRow = '<tr>' + columns.map(value => '<th>' + escapeHtml(value) + '</th>').join('') + '</tr>';
   const bodyRows = rows.map(row => '<tr>' + row.map(value => '<td>' + escapeHtml(value) + '</td>').join('') + '</tr>').join('');
-  const workbook = '<!doctype html><html><head><meta charset="utf-8"><title>OCI Marketing Control Tower</title></head><body>'
-    + '<h2>OCI Marketing Control Tower</h2><p>' + escapeHtml(t('channel')) + ': ' + escapeHtml(channelLabel(channel)) + ' · ' + escapeHtml(locale === 'en' ? 'Exported from the active view' : 'Diekspor dari tampilan aktif') + '</p>'
+  const workbook = '<!doctype html><html><head><meta charset="utf-8"><title>O.TWO.O COSMETIC INDONESIA MARKETING CONTROL</title></head><body>'
+    + '<h2>O.TWO.O COSMETIC INDONESIA MARKETING CONTROL</h2><p>' + escapeHtml(t('channel')) + ': ' + escapeHtml(channelLabel(channel)) + ' · ' + escapeHtml(locale === 'en' ? 'Exported from the active view' : 'Diekspor dari tampilan aktif') + '</p>'
     + '<table border="1"><thead>' + headerRow + '</thead><tbody>' + bodyRows + '</tbody></table></body></html>';
   const blob = new Blob(['\ufeff', workbook], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
