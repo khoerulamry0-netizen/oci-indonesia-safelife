@@ -14,6 +14,7 @@ const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
 const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
 const onlineParetoGid = '1197311588';
+const onlineSkuCategorySheetName = 'SKU CATEGORY';
 const offlineParetoGid = '616754166';
 const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
@@ -122,6 +123,16 @@ async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
   return parseCsv(text);
 }
 
+async function fetchSheetCsv(sheetName, sourceSpreadsheetId = onlineSpreadsheetId) {
+  const url = 'https://docs.google.com/spreadsheets/d/' + sourceSpreadsheetId
+    + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName) + '&cachebust=' + Date.now();
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error('Google Sheets returned ' + response.status);
+  const text = await response.text();
+  if (!text.trim() || /<html[\s>]/i.test(text)) throw new Error('Google Sheets did not return CSV data');
+  return parseCsv(text);
+}
+
 function parseRupiah(value) {
   const text = String(value ?? '').trim();
   if (!text || text === '-' || text === '—') return 0;
@@ -145,6 +156,23 @@ function buildMasterCostMap(rows) {
   }
   if (!costs.size) throw new Error('Master Cost returned no usable rows');
   return costs;
+}
+
+function buildSkuCategoryMap(rows) {
+  const headerIndex = findHeader(rows, ['SKU ID', 'Category']);
+  if (headerIndex < 0) throw new Error('SKU CATEGORY headers not found');
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU ID');
+  const categoryIndex = columnIndex(header, 'Category');
+  const categories = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = normalized(row[skuIndex]).toUpperCase();
+    const category = String(row[categoryIndex] ?? '').trim();
+    if (!sku || !category || categories.has(sku)) continue;
+    categories.set(sku, category);
+  }
+  if (!categories.size) throw new Error('SKU CATEGORY returned no usable rows');
+  return categories;
 }
 
 function buildOnlineAverageMap(rows) {
@@ -281,11 +309,12 @@ async function offlineData(res) {
 
 async function proxyOnline(res) {
   try {
-    const [response, costRows, summaryRows, paretoRows] = await Promise.all([
+    const [response, costRows, summaryRows, paretoRows, categoryRows] = await Promise.all([
       fetch(upstream, { headers: { accept: 'application/json' } }),
       fetchCsv(masterCostGid, onlineSpreadsheetId),
       fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
       fetchCsv(onlineParetoGid, onlineSpreadsheetId),
+      fetchSheetCsv(onlineSkuCategorySheetName, onlineSpreadsheetId),
     ]);
     if (!response.ok) throw new Error('Upstream returned ' + response.status);
     const rows = JSON.parse(await response.text());
@@ -293,9 +322,11 @@ async function proxyOnline(res) {
     const costs = buildMasterCostMap(costRows);
     const averages = buildOnlineAverageMap(summaryRows);
     const pareto = buildParetoMap(paretoRows);
+    const skuCategories = buildSkuCategoryMap(categoryRows);
     const enriched = rows.map(row => ({
       ...row,
       productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
+      skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
       averageWeeklySales: averages.has(String(row.sku ?? '').trim())
         ? averages.get(String(row.sku ?? '').trim()) : null,
       averageDailySales: averages.has(String(row.sku ?? '').trim())

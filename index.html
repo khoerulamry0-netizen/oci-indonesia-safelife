@@ -70,6 +70,11 @@
               <option value="unknown" data-i18n="cover_unknown">Tidak ada cover</option>
             </select>
           </label>
+          <label id="sku-category-picker" class="risk-picker"><span data-i18n="sku_category_filter">Kategori SKU</span>
+            <select id="sku-category-filter">
+              <option value="" data-i18n="all_sku_categories">Semua kategori</option>
+            </select>
+          </label>
           <label class="risk-picker"><span data-i18n="risk_value_filter">Nilai risiko</span>
             <select id="risk-value-filter">
               <option value="" data-i18n="all_risk_value">Semua nilai</option>
@@ -110,7 +115,7 @@
         </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
-          <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
+          <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" class="numeric" data-i18n="stock_cover_weeks">Stock cover<br>(minggu)</th><th scope="col" class="numeric" data-i18n="stock_cover_months">Stock cover<br>(bulan)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>

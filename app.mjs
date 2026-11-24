@@ -42,6 +42,8 @@ const translations = {
     expiry_180_plus: '> 180 hari',
     stock_cover_filter: 'Stock cover',
     all_stock_cover: 'Semua cover',
+    sku_category_filter: 'Kategori SKU',
+    all_sku_categories: 'Semua kategori',
     cover_0_30: '≤ 30 hari',
     cover_31_90: '31–90 hari',
     cover_91_180: '91–180 hari',
@@ -85,6 +87,8 @@ const translations = {
     average_weekly_sales: 'Rata-rata sales<br>per minggu',
     average_daily_sales: 'Rata-rata sales<br>per hari',
     stock_cover: 'Stock cover<br>(hari)',
+    stock_cover_weeks: 'Stock cover<br>(minggu)',
+    stock_cover_months: 'Stock cover<br>(bulan)',
     expiry_date_qty: 'Expired date / qty',
     expired_risk_pcs: 'Risiko expired<br>(pcs)',
     risk_status_header: 'Status risiko',
@@ -158,6 +162,8 @@ const translations = {
     expiry_180_plus: '> 180 days',
     stock_cover_filter: 'Stock cover',
     all_stock_cover: 'All cover periods',
+    sku_category_filter: 'SKU category',
+    all_sku_categories: 'All categories',
     cover_0_30: '≤ 30 days',
     cover_31_90: '31–90 days',
     cover_91_180: '91–180 days',
@@ -201,6 +207,8 @@ const translations = {
     average_weekly_sales: 'Average sales<br>per week',
     average_daily_sales: 'Average sales<br>per day',
     stock_cover: 'Stock cover<br>(days)',
+    stock_cover_weeks: 'Stock cover<br>(weeks)',
+    stock_cover_months: 'Stock cover<br>(months)',
     expiry_date_qty: 'Expiry date / qty',
     expired_risk_pcs: 'Expiry risk<br>(pcs)',
     risk_status_header: 'Risk status',
@@ -274,6 +282,8 @@ const tableRows = document.getElementById('rows');
 const urgencyFilter = document.getElementById('urgency-filter');
 const expiryRangeFilter = document.getElementById('expiry-range-filter');
 const stockCoverFilter = document.getElementById('stock-cover-filter');
+const skuCategoryPicker = document.getElementById('sku-category-picker');
+const skuCategoryFilter = document.getElementById('sku-category-filter');
 const riskValueFilter = document.getElementById('risk-value-filter');
 const salesVelocityFilter = document.getElementById('sales-velocity-filter');
 const prioritySort = document.getElementById('priority-sort');
@@ -360,6 +370,14 @@ function stockCoverFormat(value) {
   return Number.isFinite(value) && value >= 0 ? salesNumber.format(value) : '—';
 }
 
+function stockCoverWeeksFormat(value) {
+  return Number.isFinite(value) && value >= 0 ? stockCoverFormat(value / 7) : '—';
+}
+
+function stockCoverMonthsFormat(value) {
+  return Number.isFinite(value) && value >= 0 ? stockCoverFormat(value / 30) : '—';
+}
+
 function channelLabel(value) {
   return value === 'Offline' ? t('offline_monthly') : t('online');
 }
@@ -404,7 +422,35 @@ function applyLanguage() {
   document.querySelector('.table-wrap').setAttribute('aria-label', t('inventory_title'));
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
+  updateSkuCategoryOptions();
+  updateSkuCategoryVisibility();
   updateSyncStatus();
+}
+
+function updateSkuCategoryOptions() {
+  const selected = skuCategoryFilter.value;
+  const categories = [...new Set(onlineRecords
+    .map(record => String(record.skuCategory ?? '').trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, locale === 'en' ? 'en' : 'id'));
+  skuCategoryFilter.replaceChildren();
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = t('all_sku_categories');
+  skuCategoryFilter.append(allOption);
+  for (const category of categories) {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = category;
+    skuCategoryFilter.append(option);
+  }
+  skuCategoryFilter.value = categories.includes(selected) ? selected : '';
+}
+
+function updateSkuCategoryVisibility() {
+  const isOnline = channel === 'Online';
+  skuCategoryPicker.hidden = !isOnline;
+  skuCategoryFilter.disabled = !isOnline;
 }
 
 function visibleRecords() {
@@ -413,6 +459,7 @@ function visibleRecords() {
     .filter(record => !urgencyFilter.value || (record.daysLeft !== null && record.daysLeft <= Number(urgencyFilter.value)))
     .filter(record => !expiryRangeFilter.value || expiryRangeBand(record.daysLeft) === expiryRangeFilter.value)
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
+    .filter(record => channel !== 'Online' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -440,7 +487,7 @@ function escapeHtml(value) {
 
 function exportExcelFile() {
   const visible = visibleRecords();
-  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('stock_cover').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
+  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('stock_cover').replace('<br>', ' '), t('stock_cover_weeks').replace('<br>', ' '), t('stock_cover_months').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
   const rows = visible.map(record => {
     const riskValue = pricedRiskValue(record);
     const [riskLabel] = statusOf(record);
@@ -454,6 +501,8 @@ function exportExcelFile() {
       salesFormat(record.averageDailySales),
       salesFormat(record.averageWeeklySales),
       stockCoverFormat(record.stockCoverDays),
+      stockCoverWeeksFormat(record.stockCoverDays),
+      stockCoverMonthsFormat(record.stockCoverDays),
       expiryText(record),
       record.risk === null ? '—' : number.format(record.risk),
       riskLabel,
@@ -524,7 +573,7 @@ function draw() {
     if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
     if (channel === 'Online' && onlineState === 'error') label = t('online_error');
     const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 11;
+    message.colSpan = 13;
   }
 
   for (const record of visible) {
@@ -544,6 +593,8 @@ function draw() {
     cell(row, salesFormat(record.averageDailySales), 'numeric');
     cell(row, salesFormat(record.averageWeeklySales), 'numeric');
     cell(row, stockCoverFormat(record.stockCoverDays), 'numeric');
+    cell(row, stockCoverWeeksFormat(record.stockCoverDays), 'numeric');
+    cell(row, stockCoverMonthsFormat(record.stockCoverDays), 'numeric');
     expiryCell(row, record);
     cell(row, record.risk === null ? '\u2014' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
     const [label, statusClass] = statusOf(record);
@@ -562,7 +613,9 @@ function mergeRecords() {
 for (const button of filterButtons) {
   button.addEventListener('click', () => {
     channel = button.dataset.channel;
+    if (channel !== 'Online') skuCategoryFilter.value = '';
     for (const item of filterButtons) item.setAttribute('aria-pressed', String(item === button));
+    updateSkuCategoryVisibility();
     draw();
   });
 }
@@ -580,6 +633,7 @@ riskFilter.addEventListener('change', draw);
 urgencyFilter.addEventListener('change', draw);
 expiryRangeFilter.addEventListener('change', draw);
 stockCoverFilter.addEventListener('change', draw);
+skuCategoryFilter.addEventListener('change', draw);
 riskValueFilter.addEventListener('change', draw);
 salesVelocityFilter.addEventListener('change', draw);
 prioritySort.addEventListener('change', draw);
@@ -592,12 +646,14 @@ resetFiltersButton.addEventListener('click', () => {
   urgencyFilter.value = '';
   expiryRangeFilter.value = '';
   stockCoverFilter.value = '';
+  skuCategoryFilter.value = '';
   riskValueFilter.value = '';
   salesVelocityFilter.value = '';
   prioritySort.value = 'value';
   paretoFilter.value = '';
   channel = 'Online';
   for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.channel === channel));
+  updateSkuCategoryVisibility();
   draw();
 });
 applyLanguage();
@@ -631,6 +687,7 @@ async function refreshOnline() {
       stockCoverDays: Number(row.averageDailySales) > 0 ? Number(row.stock) / Number(row.averageDailySales) : null,
       expiries:row.expiries.map(e => ({...e, date:new Date(e.date + 'T00:00:00Z')}))
     }));
+    updateSkuCategoryOptions();
     onlineState = 'ready';
   } catch (error) {
     console.error(error);
