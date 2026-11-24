@@ -43,6 +43,8 @@ h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.
 .priority-high { color: #8a4f0b; background: #fff2d3; }
 .priority-medium { color: #08624f; background: #e3f5eb; }
 .priority-monitor { color: #455e68; background: #edf2f4; }
+.priority-pareto { color: #08624f; background: #e3f5eb; }
+.priority-non-pareto { color: #455e68; background: #edf2f4; }
 .inventory { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .inventory-head, .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 17px 20px; }
 .inventory-head { padding-top: 21px; padding-bottom: 12px; }
