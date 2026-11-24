@@ -18,12 +18,13 @@ body { margin: 0; }
 .demo { color: #d8efea; border: 1px solid #597a7e; border-radius: 20px; padding: 5px 10px; font-size: .875rem; }
 h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; }
 .hero p { margin: 0; color: #bed4d8; line-height: 1.55; }
-.stats { position: relative; margin-top: -48px; display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stats { position: relative; margin-top: -48px; display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .stat { background: #fff; border: 1px solid var(--border); border-radius: 14px; min-height: 119px; padding: 16px 20px; display: grid; align-content: start; gap: 2px; box-shadow: 0 5px 18px #102c3608; }
 .stat span { font-size: .9rem; color: var(--muted); font-weight: 650; }
 .stat strong { font-size: 2rem; letter-spacing: -.05em; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .stat small { color: var(--muted); font-size: .8rem; }
 .risk-stat strong { color: #aa341f; }
+.risk-value-stat strong { color: #8a4f0b; }
 .missing-stat strong { color: #865507; }
 .inventory { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .inventory-head, .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 17px 20px; }
@@ -73,6 +74,7 @@ tbody tr:hover { background: #f8fbfb; }
   .masthead { padding: 14px 0; }
   .hero { padding-bottom: 68px; }
   .stats { gap: 8px; margin-top: -38px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { padding: 10px; min-height: 113px; }
   .stat strong { font-size: 1.65rem; }
   .inventory { margin-top: 16px; }
