@@ -73,10 +73,10 @@ function drawPriorities(visible) {
     sku.textContent = record.sku;
     product.append(title, sku);
     const expiry = record.expiries[0];
-    cell(row, expiry ? date.format(expiry.date) + ' Â· ' + number.format(record.daysLeft) + ' hari' : 'â€”');
+    cell(row, expiry ? date.format(expiry.date) + ' \u00b7 ' + number.format(record.daysLeft) + ' hari' : '\u2014');
     cell(row, number.format(record.risk), 'numeric risk-value');
     cell(row, rupiah.format(pricedRiskValue(record)), 'numeric risk-value');
-    cell(row, Number.isFinite(record.averageMonthlySales) ? number.format(Math.round(record.averageMonthlySales)) : 'â€”', 'numeric');
+    cell(row, Number.isFinite(record.averageMonthlySales) ? number.format(Math.round(record.averageMonthlySales)) : '—', 'numeric');
     const [label, statusClass, action] = marketingAction(record);
     const actionCell = cell(row, '');
     const badge = document.createElement('span');
