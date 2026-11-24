@@ -4,6 +4,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
+const rootPrefix = root.endsWith(sep) ? root : root + sep;
 const port = Number(process.env.PORT || 10000);
 const upstream = 'https://oci-indonesia.verdantspark1.chatgpt.site/api/online';
 const contentTypes = {
@@ -33,7 +34,7 @@ async function proxyOnline(res) {
 async function serveStatic(res, pathname) {
   const relative = pathname === '/' ? 'index.html' : pathname.slice(1);
   const file = normalize(join(root, relative));
-  if (!file.startsWith(root + sep) && file !== join(root, 'index.html')) return send(res, 403, 'Forbidden');
+  if (!file.startsWith(rootPrefix) && file !== join(root, 'index.html')) return send(res, 403, 'Forbidden');
   try {
     const body = await readFile(file);
     send(res, 200, body, contentTypes[extname(file)] || 'application/octet-stream');
