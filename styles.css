@@ -10,7 +10,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; }
-.wrap { width: min(1180px, calc(100% - 64px)); margin-inline: auto; }
+.wrap { width: min(1400px, calc(100% - 64px)); margin-inline: auto; }
 .hero { background: #102c36; color: #fff; padding-bottom: 76px; }
 .masthead { display: flex; justify-content: space-between; align-items: center; color: #e1f3f0; border-bottom: 1px solid #35505a; padding: 20px 0; gap: 12px; }
 .brand { display: inline-flex; align-items: center; gap: 11px; font-size: 1rem; font-weight: 750; }
@@ -26,7 +26,7 @@ body { margin: 0; }
 .language-switch button:hover:not([aria-pressed="true"]) { background: #28515a; color: #fff; }
 h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; }
 .hero p { margin: 0; color: #bed4d8; line-height: 1.55; }
-.stats { position: relative; display: grid; gap: 16px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stats { position: relative; display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .stat { background: #fff; border: 1px solid var(--border); border-radius: 14px; min-height: 119px; padding: 16px 20px; display: grid; align-content: start; gap: 2px; box-shadow: 0 5px 18px #102c3608; }
 .stat span { font-size: .9rem; color: var(--muted); font-weight: 650; }
 .stat strong { font-size: 2rem; letter-spacing: -.05em; line-height: 1.2; font-variant-numeric: tabular-nums; }
