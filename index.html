@@ -24,6 +24,7 @@
         <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
       </section>
     <section class="inventory rose-inventory" aria-labelledby="inventory-title">
+      <div class="inventory-controls">
         <div class="inventory-head">
           <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
           <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
@@ -113,6 +114,7 @@
           <button type="button" id="reset-filters" class="export-button" data-i18n="reset_filters">Reset filter</button>
           <span id="result-count" role="status"></span>
         </div>
+      </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
           <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" class="numeric" data-i18n="stock_cover_weeks">Stock cover<br>(minggu)</th><th scope="col" class="numeric" data-i18n="stock_cover_months">Stock cover<br>(bulan)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
