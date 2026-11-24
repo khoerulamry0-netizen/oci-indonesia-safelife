@@ -514,7 +514,6 @@ function draw() {
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '\u2014';
   document.getElementById('urgent-count').textContent = number.format(urgent.length);
-  document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
   tableRows.replaceChildren();
 
