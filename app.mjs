@@ -315,7 +315,11 @@ function setupStickyTableHeader() {
     const wrapRect = tableWrap.getBoundingClientRect();
     const sourceHeadRect = sourceHead.getBoundingClientRect();
     const sourceTableWidth = Math.max(sourceTable.getBoundingClientRect().width, sourceTable.scrollWidth);
-    const isInTable = wrapRect.top <= controlsHeight && wrapRect.bottom > controlsHeight + sourceHeadRect.height;
+    const pageScrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const tableTop = wrapRect.top + pageScrollTop;
+    const tableBottom = tableTop + tableWrap.offsetHeight;
+    const isInTable = pageScrollTop >= tableTop - controlsHeight
+      && pageScrollTop < tableBottom - controlsHeight - sourceHeadRect.height;
 
     stickyTableHead.style.top = controlsHeight + 'px';
     stickyTableHead.style.left = wrapRect.left + 'px';
@@ -335,6 +339,7 @@ function setupStickyTableHeader() {
 
   tableScroll.addEventListener('scroll', sync, {passive: true});
   window.addEventListener('scroll', sync, {passive: true});
+  document.addEventListener('scroll', sync, {passive: true, capture: true});
   window.addEventListener('resize', sync);
   sync();
 }
