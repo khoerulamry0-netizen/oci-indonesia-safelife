@@ -59,7 +59,7 @@ function expiryCell(row, record) {
 function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
     ? 'Google Sheets \u00b7 Online + Master Cost'
-    : 'Google Sheets \u00b7 CLUSTERING OFFLINE';
+    : 'Google Sheets \u00b7 CLUSTERING OFFLINE + Master Cost';
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
   const knownRisk = visible.filter(record => record.risk !== null);
@@ -90,7 +90,7 @@ function draw() {
     product.append(title, sku);
     cell(row, record.channel);
     cell(row, number.format(record.stock), 'numeric');
-    cell(row, channel === 'Online' && Number.isFinite(record.productCost)
+    cell(row, Number.isFinite(record.productCost)
       ? rupiah.format(record.productCost) : '\u2014', 'numeric');
     cell(row, Number.isFinite(record.averageMonthlySales)
       ? number.format(Math.round(record.averageMonthlySales)) : '\u2014', 'numeric');
