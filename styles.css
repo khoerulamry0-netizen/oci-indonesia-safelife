@@ -13,9 +13,8 @@ body { margin: 0; }
 .wrap { width: min(1700px, calc(100% - 48px)); margin-inline: auto; }
 .hero { background: #102c36; color: #fff; padding-bottom: 76px; }
 .masthead { display: flex; justify-content: space-between; align-items: center; color: #e1f3f0; border-bottom: 1px solid #35505a; padding: 20px 0; gap: 12px; }
-.brand { display: inline-flex; align-items: center; gap: 11px; font-size: 1rem; font-weight: 750; }
-.brand-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: #58e4bc; padding: 5px; }
-.brand-icon svg { display: block; width: 100%; height: 100%; }
+.brand { display: inline-flex; align-items: center; min-width: 112px; }
+.brand-logo { display: block; width: 112px; height: 72px; object-fit: cover; object-position: center; filter: brightness(0) invert(1); }
 .demo { color: #d8efea; border: 1px solid #597a7e; border-radius: 20px; padding: 5px 10px; font-size: .875rem; }
 .sync-status { color: #c2dcda; font-size: .75rem; white-space: nowrap; }
 .sync-status.is-ready { color: #8de8c8; }
@@ -86,6 +85,7 @@ tbody tr:hover { background: #f8fbfb; }
 @media (max-width: 670px) {
   .wrap { width: calc(100% - 28px); }
   .masthead { padding: 14px 0; flex-wrap: wrap; }
+  .brand-logo { width: 102px; height: 64px; }
   .hero { padding-bottom: 68px; }
   .stats { gap: 8px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
