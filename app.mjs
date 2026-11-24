@@ -49,6 +49,8 @@ const translations = {
     available_stock: 'Stok<br>tersedia',
     risk_value_idr: 'Nilai risiko expired<br>(Rp)',
     average_monthly_sales: 'Rata-rata sales<br>per bulan',
+    average_weekly_sales: 'Rata-rata sales<br>per minggu',
+    average_daily_sales: 'Rata-rata sales<br>per hari',
     expiry_date_qty: 'Expired date / qty',
     expired_risk_pcs: 'Risiko expired<br>(pcs)',
     risk_status_header: 'Status risiko',
@@ -126,6 +128,8 @@ const translations = {
     available_stock: 'Available<br>stock',
     risk_value_idr: 'Expiry risk value<br>(IDR)',
     average_monthly_sales: 'Average sales<br>per month',
+    average_weekly_sales: 'Average sales<br>per week',
+    average_daily_sales: 'Average sales<br>per day',
     expiry_date_qty: 'Expiry date / qty',
     expired_risk_pcs: 'Expiry risk<br>(pcs)',
     risk_status_header: 'Risk status',
@@ -159,6 +163,7 @@ const translations = {
 
 let locale = localStorage.getItem('oci-locale') === 'en' ? 'en' : 'id';
 let number;
+let salesNumber;
 let rupiah;
 let date;
 
@@ -168,6 +173,7 @@ function t(key) {
 
 function resetFormatters() {
   number = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID');
+  salesNumber = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', { maximumFractionDigits: 1 });
   rupiah = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
     style: 'currency', currency: 'IDR', currencyDisplay: 'code', maximumFractionDigits: 0,
   });
@@ -215,6 +221,10 @@ function statusOf(record) {
 function pricedRiskValue(record) {
   return Number.isFinite(record.risk) && Number.isFinite(record.productCost)
     ? record.risk * record.productCost : null;
+}
+
+function salesFormat(value) {
+  return Number.isFinite(value) ? salesNumber.format(value) : '—';
 }
 
 function marketingAction(record) {
@@ -278,7 +288,7 @@ function escapeHtml(value) {
 
 function exportExcelFile() {
   const visible = visibleRecords();
-  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
+  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
   const rows = visible.map(record => {
     const riskValue = pricedRiskValue(record);
     const [riskLabel] = statusOf(record);
@@ -288,7 +298,9 @@ function exportExcelFile() {
       channelLabel(record.channel),
       number.format(record.stock),
       Number.isFinite(riskValue) ? rupiah.format(riskValue) : '—',
-      Number.isFinite(record.averageMonthlySales) ? number.format(Math.round(record.averageMonthlySales)) : '—',
+      salesFormat(record.averageMonthlySales),
+      salesFormat(record.averageDailySales),
+      salesFormat(record.averageWeeklySales),
       expiryText(record),
       record.risk === null ? '—' : number.format(record.risk),
       riskLabel,
@@ -349,7 +361,7 @@ function drawPriorities(visible) {
     cell(row, expiry ? date.format(expiry.date) + ' \u00b7 ' + number.format(record.daysLeft) + ' ' + t('days_left') : '\u2014');
     cell(row, number.format(record.risk), 'numeric risk-value');
     cell(row, rupiah.format(pricedRiskValue(record)), 'numeric risk-value');
-    cell(row, Number.isFinite(record.averageMonthlySales) ? number.format(Math.round(record.averageMonthlySales)) : '—', 'numeric');
+    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
     const [label, statusClass, action] = marketingAction(record);
     const actionCell = cell(row, '');
     const badge = document.createElement('span');
@@ -389,6 +401,10 @@ function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
     ? t('online_source')
     : t('offline_source');
+  const priorityPanel = document.querySelector('.priority-panel');
+  const searchActive = search.value.trim().length > 0;
+  priorityPanel.hidden = searchActive;
+  priorityPanel.setAttribute('aria-hidden', String(searchActive));
   const visible = visibleRecords();
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
@@ -399,7 +415,8 @@ function draw() {
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? rupiah.format(totalRiskValue) : '\u2014';
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
-  drawPriorities(visible);
+  if (searchActive) priorityRows.replaceChildren();
+  else drawPriorities(visible);
   tableRows.replaceChildren();
 
   if (!visible.length) {
@@ -409,7 +426,7 @@ function draw() {
     if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
     if (channel === 'Online' && onlineState === 'error') label = t('online_error');
     const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 8;
+    message.colSpan = 10;
   }
 
   for (const record of visible) {
@@ -425,8 +442,9 @@ function draw() {
     cell(row, number.format(record.stock), 'numeric');
     cell(row, Number.isFinite(riskValue)
       ? rupiah.format(riskValue) : '\u2014', 'numeric');
-    cell(row, Number.isFinite(record.averageMonthlySales)
-      ? number.format(Math.round(record.averageMonthlySales)) : '\u2014', 'numeric');
+    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
+    cell(row, salesFormat(record.averageDailySales), 'numeric');
+    cell(row, salesFormat(record.averageWeeklySales), 'numeric');
     expiryCell(row, record);
     cell(row, record.risk === null ? '\u2014' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
     const [label, statusClass] = statusOf(record);
