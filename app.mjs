@@ -39,13 +39,13 @@ function appendExpiry(list, label, qty, days) {
   const detail = document.createElement('span');
   detail.textContent = days === null
     ? number.format(qty) + ' pcs'
-    : number.format(qty) + ' pcs Â· ' + (days === 0 ? 'hari ini' : number.format(days) + ' hari lagi');
+    : number.format(qty) + ' pcs \u00b7 ' + (days === 0 ? 'hari ini' : number.format(days) + ' hari lagi');
   entry.append(dateLabel, detail);
   list.append(entry);
 }
 
 function expiryCell(row, record) {
-  const td = cell(row, 'â€”');
+  const td = cell(row, '\u2014');
   if (!record.expiries.length && !record.undatedStock) return;
   const list = document.createElement('ul');
   list.className = 'expiry-list';
@@ -58,23 +58,23 @@ function expiryCell(row, record) {
 
 function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
-    ? 'Google Sheets Â· Online + Master Cost'
-    : 'Google Sheets Â· CLUSTERING OFFLINE';
+    ? 'Google Sheets \u00b7 Online + Master Cost'
+    : 'Google Sheets \u00b7 CLUSTERING OFFLINE';
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
   const knownRisk = visible.filter(record => record.risk !== null);
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
-    ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : 'â€”';
+    ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = number.format(visible.length) + ' hasil';
   tableRows.replaceChildren();
 
   if (!visible.length) {
     let label = 'Tidak ada produk yang cocok dengan filter dan pencarian.';
-    if (channel === 'Offline' && offlineState === 'loading') label = 'Memuat data Offline dari Google Sheetsâ€¦';
+    if (channel === 'Offline' && offlineState === 'loading') label = 'Memuat data Offline dari Google Sheets\u2026';
     if (channel === 'Offline' && offlineState === 'error') label = 'Sinkronisasi data Offline gagal. Tidak ada data contoh yang ditampilkan.';
-    if (channel === 'Online' && onlineState === 'loading') label = 'Memuat stok Online dari Google Sheetsâ€¦';
+    if (channel === 'Online' && onlineState === 'loading') label = 'Memuat stok Online dari Google Sheets\u2026';
     if (channel === 'Online' && onlineState === 'error') label = 'Data Online belum bisa dimuat. Muat ulang halaman untuk mencoba lagi.';
     const message = cell(tableRows.insertRow(), label, 'empty');
     message.colSpan = 8;
@@ -90,11 +90,12 @@ function draw() {
     product.append(title, sku);
     cell(row, record.channel);
     cell(row, number.format(record.stock), 'numeric');
-    cell(row, channel === 'Online' && record.productCost !== null && record.productCost !== undefined
-      ? rupiah.format(record.productCost) : 'â€”', 'numeric');
-    cell(row, record.averageMonthlySales === null ? 'â€”' : number.format(Math.round(record.averageMonthlySales)), 'numeric');
+    cell(row, channel === 'Online' && Number.isFinite(record.productCost)
+      ? rupiah.format(record.productCost) : '\u2014', 'numeric');
+    cell(row, Number.isFinite(record.averageMonthlySales)
+      ? number.format(Math.round(record.averageMonthlySales)) : '\u2014', 'numeric');
     expiryCell(row, record);
-    cell(row, record.risk === null ? 'â€”' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
+    cell(row, record.risk === null ? '\u2014' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
     const [label, statusClass] = statusOf(record);
     const badge = document.createElement('span');
     badge.className = 'status ' + statusClass;
