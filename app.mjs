@@ -2,6 +2,15 @@ import { filterPortfolio, portfolio } from './inventory.mjs';
 
 const translations = {
   id: {
+    filter_button: 'Filter',
+    average_sales: 'Rata-rata sales',
+    day_unit: 'Hari',
+    week_unit: 'Minggu',
+    month_unit: 'Bulan',
+    nearest_expiry_short: 'ED terdekat',
+    risk_qty_short: 'Qty berisiko',
+    risk_value_short: 'Nilai risiko',
+    stock_details: 'Detail stok',
     title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Pantau stok, risiko expired, dan peluang promosi berbasis data.',
     dashboard: 'Dashboard',
@@ -122,6 +131,15 @@ const translations = {
     sync_issue: 'Sinkronisasi perlu diperiksa',
   },
   en: {
+    filter_button: 'Filters',
+    average_sales: 'Average sales',
+    day_unit: 'Day',
+    week_unit: 'Week',
+    month_unit: 'Month',
+    nearest_expiry_short: 'Nearest expiry',
+    risk_qty_short: 'At-risk qty',
+    risk_value_short: 'Risk value',
+    stock_details: 'Stock details',
     title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Monitor inventory, expiry risk, and data-driven promotion opportunities.',
     dashboard: 'Dashboard',
@@ -299,6 +317,17 @@ const languageButtons = {
   en: document.getElementById('language-en'),
 };
 let channel = 'Online';
+const mobileInventory = window.matchMedia('(max-width: 670px)');
+const stockCards = document.getElementById('stock-cards');
+const filterToggle = document.getElementById('filter-toggle');
+const advancedFilters = document.getElementById('advanced-filters');
+const activeFilterCount = document.getElementById('active-filter-count');
+let syncStickyHeader = () => {};
+
+function setFiltersExpanded(expanded) {
+  filterToggle.setAttribute('aria-expanded', String(expanded));
+  advancedFilters.classList.toggle('is-expanded', expanded);
+}
 
 function setupStickyTableHeader() {
   const sourceTable = tableScroll?.querySelector('table');
@@ -306,11 +335,18 @@ function setupStickyTableHeader() {
   if (!tableWrap || !tableScroll || !sourceTable || !sourceHead || !stickyTableHead) return;
 
   const stickyTable = sourceTable.cloneNode(false);
+  const columns = document.createElement('colgroup');
+  for (let index = 0; index < 13; index++) columns.append(document.createElement('col'));
+  stickyTable.append(columns);
   stickyTable.append(sourceHead.cloneNode(true));
   stickyTableHead.replaceChildren(stickyTable);
+  const controls = document.querySelector('.inventory-controls');
 
   const sync = () => {
-    const controls = document.querySelector('.inventory-controls');
+    if (mobileInventory.matches) {
+      stickyTableHead.classList.remove('is-visible');
+      return;
+    }
     const controlsHeight = controls?.getBoundingClientRect().height ?? 0;
     const wrapRect = tableWrap.getBoundingClientRect();
     const sourceHeadRect = sourceHead.getBoundingClientRect();
@@ -329,11 +365,12 @@ function setupStickyTableHeader() {
     stickyTable.style.minWidth = sourceTableWidth + 'px';
     stickyTable.style.transform = 'translateX(-' + tableScroll.scrollLeft + 'px)';
     stickyTableHead.classList.toggle('is-visible', isInTable);
-
-    const sourceCells = sourceHead.querySelectorAll('th');
-    const stickyCells = stickyTable.querySelectorAll('th');
-    sourceCells.forEach((cell, index) => {
-      if (stickyCells[index]) stickyCells[index].style.width = cell.getBoundingClientRect().width + 'px';
+    if (!isInTable) return;
+    const [top, units] = sourceHead.rows;
+    const headers = [...top.cells].filter(cell => cell.colSpan === 1);
+    headers.splice(4, 0, ...units.cells);
+    headers.forEach((cell, index) => {
+      columns.children[index].style.width = cell.getBoundingClientRect().width + 'px';
     });
   };
 
@@ -341,6 +378,10 @@ function setupStickyTableHeader() {
   window.addEventListener('scroll', sync, {passive: true});
   document.addEventListener('scroll', sync, {passive: true, capture: true});
   window.addEventListener('resize', sync);
+  const resizeObserver = new ResizeObserver(sync);
+  resizeObserver.observe(controls);
+  resizeObserver.observe(sourceTable);
+  syncStickyHeader = sync;
   sync();
 }
 
@@ -596,6 +637,42 @@ function expiryCell(row, record) {
   td.replaceChildren(list);
 }
 
+function appendCardField(list, key, value) {
+  const field = document.createElement('div');
+  const label = document.createElement('dt');
+  const detail = document.createElement('dd');
+  label.textContent = t(key).replaceAll('<br>', ' ');
+  detail.append(value);
+  field.append(label, detail);
+  list.append(field);
+}
+
+function appendStockCard(row, record) {
+  const card = document.createElement('li');
+  card.className = 'stock-card';
+  const [product, channelCell, stock, value, day, week, month, coverDays, coverWeeks, coverMonths, batches, qty, status] = row.cells;
+  const heading = document.createElement('h3');
+  heading.append(...product.childNodes);
+  const overview = document.createElement('dl');
+  const firstExpiry = record.expiries[0];
+  appendCardField(overview, 'nearest_expiry_short', firstExpiry ? date.format(firstExpiry.date) : '—');
+  appendCardField(overview, 'risk_qty_short', qty.textContent === '—' ? '—' : qty.textContent + ' pcs');
+  appendCardField(overview, 'risk_value_short', value.textContent);
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = t('stock_details');
+  const breakdown = document.createElement('dl');
+  for (const [key, cell] of [
+    ['channel', channelCell], ['available_stock', stock],
+    ['average_daily_sales', day], ['average_weekly_sales', week], ['average_monthly_sales', month],
+    ['stock_cover', coverDays], ['stock_cover_weeks', coverWeeks], ['stock_cover_months', coverMonths],
+    ['expiry_date_qty', batches],
+  ]) appendCardField(breakdown, key, cell.firstElementChild ?? cell.textContent);
+  details.append(summary, breakdown);
+  card.append(heading, ...status.childNodes, overview, details);
+  stockCards.append(card);
+}
+
 function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
     ? t('online_source')
@@ -611,7 +688,13 @@ function draw() {
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '\u2014';
   document.getElementById('urgent-count').textContent = number.format(urgent.length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
+  const filterCount = [...advancedFilters.querySelectorAll('select')].filter(select =>
+    select.value && select.value !== select.options[0].value
+  ).length;
+  activeFilterCount.hidden = filterCount === 0;
+  activeFilterCount.textContent = ' (' + number.format(filterCount) + ')';
   tableRows.replaceChildren();
+  stockCards.replaceChildren();
 
   if (!visible.length) {
     let label = t('no_match');
@@ -619,12 +702,19 @@ function draw() {
     if (channel === 'Offline' && offlineState === 'error') label = t('offline_error');
     if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
     if (channel === 'Online' && onlineState === 'error') label = t('online_error');
-    const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 13;
+    if (mobileInventory.matches) {
+      const message = document.createElement('li');
+      message.className = 'empty';
+      message.textContent = label;
+      stockCards.append(message);
+    } else {
+      const message = cell(tableRows.insertRow(), label, 'empty');
+      message.colSpan = 13;
+    }
   }
 
   for (const record of visible) {
-    const row = tableRows.insertRow();
+    const row = mobileInventory.matches ? document.createElement('tr') : tableRows.insertRow();
     const riskValue = pricedRiskValue(record);
     const product = cell(row, '', 'product');
     const title = document.createElement('strong');
@@ -636,9 +726,9 @@ function draw() {
     cell(row, number.format(record.stock), 'numeric');
     cell(row, Number.isFinite(riskValue)
       ? rupiah.format(riskValue) : '\u2014', 'numeric');
-    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
     cell(row, salesFormat(record.averageDailySales), 'numeric');
     cell(row, salesFormat(record.averageWeeklySales), 'numeric');
+    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
     cell(row, stockCoverFormat(record.stockCoverDays), 'numeric');
     cell(row, stockCoverWeeksFormat(record.stockCoverDays), 'numeric');
     cell(row, stockCoverMonthsFormat(record.stockCoverDays), 'numeric');
@@ -649,7 +739,9 @@ function draw() {
     badge.className = 'status ' + statusClass;
     badge.textContent = label;
     cell(row, '').append(badge);
+    if (mobileInventory.matches) appendStockCard(row, record);
   }
+  syncStickyHeader();
 }
 
 function mergeRecords() {
@@ -677,6 +769,16 @@ for (const [nextLocale, button] of Object.entries(languageButtons)) {
   });
 }
 riskFilter.addEventListener('change', draw);
+mobileInventory.addEventListener('change', draw);
+filterToggle.addEventListener('click', () => {
+  setFiltersExpanded(filterToggle.getAttribute('aria-expanded') !== 'true');
+});
+document.querySelector('.inventory-controls').addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !mobileInventory.matches || filterToggle.getAttribute('aria-expanded') !== 'true') return;
+  event.preventDefault();
+  setFiltersExpanded(false);
+  filterToggle.focus();
+});
 urgencyFilter.addEventListener('change', draw);
 expiryRangeFilter.addEventListener('change', draw);
 stockCoverFilter.addEventListener('change', draw);

@@ -28,12 +28,13 @@
         <div class="inventory-head">
           <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
           <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
-        </div>
-        <div class="toolbar">
           <div id="filters" class="filters" role="group" aria-label="Filter channel">
             <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
             <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
           </div>
+          <button type="button" id="filter-toggle" class="export-button mobile-filter-toggle" aria-controls="advanced-filters" aria-expanded="false"><span data-i18n="filter_button">Filter</span><span id="active-filter-count" hidden></span></button>
+        </div>
+        <div class="toolbar" id="advanced-filters">
           <label class="risk-picker"><span data-i18n="risk_status">Status risiko</span>
             <select id="risk-filter">
               <option value="" data-i18n="all_status">Semua status</option>
@@ -112,14 +113,39 @@
           </label>
           <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
           <button type="button" id="reset-filters" class="export-button" data-i18n="reset_filters">Reset filter</button>
-          <span id="result-count" role="status"></span>
         </div>
+        <p id="result-count" role="status"></p>
       </div>
+      <ul id="stock-cards" class="stock-cards" aria-labelledby="inventory-title"></ul>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <div id="sticky-table-head" class="sticky-table-head" aria-hidden="true"></div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" class="numeric" data-i18n="stock_cover_weeks">Stock cover<br>(minggu)</th><th scope="col" class="numeric" data-i18n="stock_cover_months">Stock cover<br>(bulan)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
+            <colgroup span="4"></colgroup>
+            <colgroup span="3"></colgroup>
+            <colgroup span="3"></colgroup>
+            <colgroup span="3"></colgroup>
+            <thead>
+              <tr>
+                <th scope="col" rowspan="2" data-i18n="product_sku_id">Produk / SKU ID</th>
+                <th scope="col" rowspan="2" data-i18n="channel">Channel</th>
+                <th scope="col" rowspan="2" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th>
+                <th scope="col" rowspan="2" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th>
+                <th scope="colgroup" colspan="3" data-i18n="average_sales">Rata-rata sales</th>
+                <th scope="colgroup" colspan="3">Stock cover</th>
+                <th scope="col" rowspan="2" data-i18n="expiry_date_qty">Expired date / qty</th>
+                <th scope="col" rowspan="2" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th>
+                <th scope="col" rowspan="2" data-i18n="risk_status">Status risiko</th>
+              </tr>
+              <tr>
+                <th scope="col" class="numeric" data-i18n="day_unit">Hari</th>
+                <th scope="col" class="numeric" data-i18n="week_unit">Minggu</th>
+                <th scope="col" class="numeric" data-i18n="month_unit">Bulan</th>
+                <th scope="col" class="numeric" data-i18n="day_unit">Hari</th>
+                <th scope="col" class="numeric" data-i18n="week_unit">Minggu</th>
+                <th scope="col" class="numeric" data-i18n="month_unit">Bulan</th>
+              </tr>
+            </thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
