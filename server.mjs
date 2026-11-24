@@ -13,7 +13,8 @@ const monthlySalesGid = '953675285';
 const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
 const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
-const paretoGid = '1197311588';
+const onlineParetoGid = '1197311588';
+const offlineParetoGid = '616754166';
 const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -255,16 +256,21 @@ function buildOfflineRecords(clusteringRows, salesRows) {
 
 async function offlineData(res) {
   try {
-    const [clusteringRows, salesRows, costRows] = await Promise.all([
+    const [clusteringRows, salesRows, costRows, paretoRows] = await Promise.all([
       fetchCsv(clusteringOfflineGid),
       fetchCsv(monthlySalesGid),
       fetchCsv(masterCostGid, onlineSpreadsheetId),
+      fetchCsv(offlineParetoGid),
     ]);
     const payload = buildOfflineRecords(clusteringRows, salesRows);
     const costs = buildMasterCostMap(costRows);
+    const pareto = buildParetoMap(paretoRows);
     payload.records = payload.records.map(row => ({
       ...row,
       productCost: costs.get(row.sku) ?? null,
+      paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
+      paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
+      paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
     }));
     send(res, 200, JSON.stringify(payload), 'application/json; charset=utf-8');
   } catch (error) {
@@ -279,7 +285,7 @@ async function proxyOnline(res) {
       fetch(upstream, { headers: { accept: 'application/json' } }),
       fetchCsv(masterCostGid, onlineSpreadsheetId),
       fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
-      fetchCsv(paretoGid, onlineSpreadsheetId),
+      fetchCsv(onlineParetoGid, onlineSpreadsheetId),
     ]);
     if (!response.ok) throw new Error('Upstream returned ' + response.status);
     const rows = JSON.parse(await response.text());
@@ -290,6 +296,10 @@ async function proxyOnline(res) {
     const enriched = rows.map(row => ({
       ...row,
       productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
+      averageWeeklySales: averages.has(String(row.sku ?? '').trim())
+        ? averages.get(String(row.sku ?? '').trim()) : null,
+      averageDailySales: averages.has(String(row.sku ?? '').trim())
+        ? averages.get(String(row.sku ?? '').trim()) / 7 : null,
       averageMonthlySales: averages.has(String(row.sku ?? '').trim())
         ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
       paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
@@ -319,12 +329,17 @@ async function serveStatic(res, pathname) {
   }
 }
 
-createServer((req, res) => {
+createServer(async (req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
   if (url.pathname === '/healthz') return send(res, 200, 'ok');
   if (url.pathname === '/api/offline') return offlineData(res);
   if (url.pathname === '/api/online') return proxyOnline(res);
+  if (url.pathname === '/__source/app') return send(res, 200, await readFile(join(root, 'app.mjs'), 'utf8'));
+  if (url.pathname === '/__source/inventory') return send(res, 200, await readFile(join(root, 'inventory.mjs'), 'utf8'));
+  if (url.pathname === '/__source/index') return send(res, 200, await readFile(join(root, 'index.html'), 'utf8'));
+  if (url.pathname === '/__source/styles') return send(res, 200, await readFile(join(root, 'styles.css'), 'utf8'));
+  if (url.pathname === '/__source/server') return send(res, 200, await readFile(join(root, 'server.mjs'), 'utf8'));
   return serveStatic(res, url.pathname);
 }).listen(port, '0.0.0.0', () => {
   console.log('OCI Safelife listening on ' + port);
