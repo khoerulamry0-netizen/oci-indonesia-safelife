@@ -26,6 +26,23 @@ h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.
 .risk-stat strong { color: #aa341f; }
 .risk-value-stat strong { color: #8a4f0b; }
 .missing-stat strong { color: #865507; }
+.priority-panel { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.priority-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; padding: 21px 20px 12px; }
+.priority-head h2 { margin: 0 0 4px; font-size: 1.42rem; letter-spacing: -.025em; }
+.priority-head p { margin: 0; color: var(--muted); font-size: .875rem; }
+.priority-controls { display: flex; flex-wrap: wrap; justify-content: end; gap: 10px; }
+.priority-table-wrap { overflow-x: auto; }
+.priority-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 760px; }
+.priority-table th, .priority-table td { padding: 11px 12px; border-top: 1px solid var(--border); font-size: .875rem; }
+.priority-table th:first-child, .priority-table td:first-child { padding-left: 20px; }
+.priority-table th:last-child, .priority-table td:last-child { padding-right: 20px; }
+.priority-table th { background: #f2f7f7; color: #455e68; font-weight: 700; vertical-align: bottom; }
+.priority-status { display: block; width: fit-content; padding: 4px 8px; border-radius: 6px; font-size: .8rem; font-weight: 750; }
+.priority-table td small { display: block; margin-top: 4px; color: var(--muted); }
+.priority-urgent { color: #932a1a; background: #ffebe4; }
+.priority-high { color: #8a4f0b; background: #fff2d3; }
+.priority-medium { color: #08624f; background: #e3f5eb; }
+.priority-monitor { color: #455e68; background: #edf2f4; }
 .inventory { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .inventory-head, .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 17px 20px; }
 .inventory-head { padding-top: 21px; padding-bottom: 12px; }
@@ -77,6 +94,8 @@ tbody tr:hover { background: #f8fbfb; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { padding: 10px; min-height: 113px; }
   .stat strong { font-size: 1.65rem; }
+  .priority-head { align-items: stretch; flex-direction: column; }
+  .priority-controls { justify-content: start; }
   .inventory { margin-top: 16px; }
   .inventory-head { flex-direction: column; align-items: stretch; }
   .search { width: 100%; }
