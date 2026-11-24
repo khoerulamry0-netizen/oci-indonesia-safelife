@@ -18,6 +18,7 @@ const tableRows = document.getElementById('rows');
 const priorityRows = document.getElementById('priority-rows');
 const urgencyFilter = document.getElementById('urgency-filter');
 const prioritySort = document.getElementById('priority-sort');
+const paretoFilter = document.getElementById('pareto-filter');
 let channel = 'Online';
 
 function cell(row, value, className = '') {
@@ -52,6 +53,7 @@ function drawPriorities(visible) {
   const candidates = visible
     .filter(record => record.risk > 0 && pricedRiskValue(record) !== null)
     .filter(record => maxDays === null || (record.daysLeft !== null && record.daysLeft <= maxDays))
+    .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value)
     .sort((a, b) => {
       if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
       if (prioritySort.value === 'qty') return b.risk - a.risk;
@@ -61,7 +63,7 @@ function drawPriorities(visible) {
   priorityRows.replaceChildren();
   if (!candidates.length) {
     const message = cell(priorityRows.insertRow(), 'Belum ada produk prioritas pada filter ini.', 'empty');
-    message.colSpan = 6;
+    message.colSpan = 7;
     return;
   }
   for (const record of candidates) {
@@ -72,6 +74,11 @@ function drawPriorities(visible) {
     const sku = document.createElement('small');
     sku.textContent = record.sku;
     product.append(title, sku);
+    const paretoCell = cell(row, '');
+    const paretoBadge = document.createElement('span');
+    paretoBadge.className = 'priority-status ' + (record.paretoStatus === 'Pareto 80%' ? 'priority-pareto' : 'priority-non-pareto');
+    paretoBadge.textContent = record.paretoStatus || 'Belum dipetakan';
+    paretoCell.append(paretoBadge);
     const expiry = record.expiries[0];
     cell(row, expiry ? date.format(expiry.date) + ' \u00b7 ' + number.format(record.daysLeft) + ' hari' : '\u2014');
     cell(row, number.format(record.risk), 'numeric risk-value');
@@ -180,6 +187,7 @@ for (const button of filterButtons) {
 riskFilter.addEventListener('change', draw);
 urgencyFilter.addEventListener('change', draw);
 prioritySort.addEventListener('change', draw);
+paretoFilter.addEventListener('change', draw);
 search.addEventListener('input', draw);
 draw();
 
