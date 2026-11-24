@@ -4,6 +4,9 @@ const translations = {
   id: {
     title: 'OCI Marketing Control Tower',
     subtitle: 'Pantau stok, risiko expired, dan peluang promosi berbasis data.',
+    dashboard: 'Dashboard',
+    inventory: 'Stok & inventori',
+    primary_navigation: 'Navigasi utama',
     summary: 'Ringkasan hasil',
     sku_per_channel: 'SKU per channel',
     at_risk_stock: 'Stok berisiko expired',
@@ -92,6 +95,9 @@ const translations = {
   en: {
     title: 'OCI Marketing Control Tower',
     subtitle: 'Monitor inventory, expiry risk, and data-driven promotion opportunities.',
+    dashboard: 'Dashboard',
+    inventory: 'Inventory',
+    primary_navigation: 'Primary navigation',
     summary: 'Results summary',
     sku_per_channel: 'SKUs per channel',
     at_risk_stock: 'Stock at expiry risk',
@@ -225,7 +231,25 @@ const languageButtons = {
   id: document.getElementById('language-id'),
   en: document.getElementById('language-en'),
 };
+const viewButtons = [...document.querySelectorAll('[data-view]')];
+const views = {
+  dashboard: document.getElementById('dashboard-view'),
+  inventory: document.getElementById('inventory-view'),
+};
+let activeView = 'dashboard';
 let channel = 'Online';
+
+function setView(nextView) {
+  if (!views[nextView]) return;
+  activeView = nextView;
+  for (const button of viewButtons) {
+    const selected = button.dataset.view === activeView;
+    button.setAttribute('aria-selected', String(selected));
+  }
+  for (const [viewName, element] of Object.entries(views)) {
+    element.hidden = viewName !== activeView;
+  }
+}
 
 function cell(row, value, className = '') {
   const td = row.insertCell();
@@ -549,6 +573,10 @@ for (const button of filterButtons) {
   });
 }
 
+for (const button of viewButtons) {
+  button.addEventListener('click', () => setView(button.dataset.view));
+}
+
 for (const [nextLocale, button] of Object.entries(languageButtons)) {
   button.addEventListener('click', () => {
     locale = nextLocale;
@@ -564,6 +592,7 @@ prioritySort.addEventListener('change', draw);
 paretoFilter.addEventListener('change', draw);
 search.addEventListener('input', draw);
 exportExcelButton.addEventListener('click', exportExcelFile);
+setView(activeView);
 applyLanguage();
 draw();
 

@@ -17,35 +17,19 @@
     </div>
   </header>
   <main class="wrap">
-    <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
-      <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
-      <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
-      <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal stok berisiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
-      <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
-      <article class="stat missing-stat"><span data-i18n="incomplete_sales">Data sales belum lengkap</span><strong id="missing-count">0</strong><small data-i18n="sku_per_channel">SKU per channel</small></article>
-    </section>
-    <section class="inventory" aria-labelledby="inventory-title">
-      <div class="inventory-head">
-        <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
-        <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
-      </div>
-      <div class="toolbar">
-        <div id="filters" class="filters" role="group" aria-label="Filter channel">
-          <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
-          <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
-        </div>
-        <label class="risk-picker"><span data-i18n="risk_status">Status risiko</span>
-          <select id="risk-filter">
-            <option value="" data-i18n="all_status">Semua status</option>
-            <option value="at-risk" data-i18n="at_risk">Berisiko expired</option>
-            <option value="clear" data-i18n="no_risk_estimate">Tidak ada estimasi risiko</option>
-            <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
-            <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
-          </select>
-        </label>
-        <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
-        <span id="result-count" role="status"></span>
-      </div>
+    <nav class="view-nav" aria-label="Primary navigation" data-i18n-aria="primary_navigation">
+      <button type="button" class="view-nav-button" data-view="dashboard" aria-selected="true" data-i18n="dashboard">Dashboard</button>
+      <button type="button" class="view-nav-button" data-view="inventory" aria-selected="false" data-i18n="inventory">Inventory</button>
+    </nav>
+    <section id="dashboard-view" class="view-section" aria-labelledby="dashboard-view-title">
+      <h2 id="dashboard-view-title" class="sr-only" data-i18n="dashboard">Dashboard</h2>
+      <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
+        <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
+        <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
+        <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal stok berisiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
+        <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
+        <article class="stat missing-stat"><span data-i18n="incomplete_sales">Data sales belum lengkap</span><strong id="missing-count">0</strong><small data-i18n="sku_per_channel">SKU per channel</small></article>
+      </section>
       <section class="priority-panel" aria-labelledby="priority-title">
         <div class="priority-head">
           <div><h2 id="priority-title" data-i18n="priority_title">Top 10 Prioritas Promo</h2><p data-i18n="priority_description">Produk dengan risiko expired dan nilai modal terbesar untuk ditindaklanjuti marketing.</p></div>
@@ -87,12 +71,37 @@
           </table>
         </div>
       </section>
+    </section>
+    <section id="inventory-view" class="view-section" aria-labelledby="inventory-title" hidden>
+      <section class="inventory">
+        <div class="inventory-head">
+          <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
+          <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
+        </div>
+        <div class="toolbar">
+          <div id="filters" class="filters" role="group" aria-label="Filter channel">
+            <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
+            <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
+          </div>
+          <label class="risk-picker"><span data-i18n="risk_status">Status risiko</span>
+            <select id="risk-filter">
+              <option value="" data-i18n="all_status">Semua status</option>
+              <option value="at-risk" data-i18n="at_risk">Berisiko expired</option>
+              <option value="clear" data-i18n="no_risk_estimate">Tidak ada estimasi risiko</option>
+              <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
+              <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
+            </select>
+          </label>
+          <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
+          <span id="result-count" role="status"></span>
+        </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
           <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
+      </section>
     </section>
     <details class="method">
       <summary data-i18n="method_title">Cara estimasi risiko expired</summary>

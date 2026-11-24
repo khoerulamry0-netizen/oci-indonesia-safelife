@@ -26,7 +26,13 @@ body { margin: 0; }
 .language-switch button:hover:not([aria-pressed="true"]) { background: #28515a; color: #fff; }
 h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; }
 .hero p { margin: 0; color: #bed4d8; line-height: 1.55; }
-.stats { position: relative; margin-top: -48px; display: grid; gap: 16px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.view-nav { position: relative; z-index: 4; margin-top: -48px; display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #d4e1e2; border-radius: 12px; background: #fff; box-shadow: 0 5px 18px #102c3610; }
+.view-nav-button { min-height: 38px; padding: 6px 17px; border: 0; border-radius: 8px; background: transparent; color: #4f6570; font: inherit; font-size: .9rem; font-weight: 750; cursor: pointer; }
+.view-nav-button[aria-selected="true"] { background: var(--teal); color: #fff; }
+.view-nav-button:hover:not([aria-selected="true"]) { background: #eaf3f2; color: #173943; }
+.view-section { margin-top: 16px; }
+.view-section[hidden] { display: none; }
+.stats { position: relative; display: grid; gap: 16px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .stat { background: #fff; border: 1px solid var(--border); border-radius: 14px; min-height: 119px; padding: 16px 20px; display: grid; align-content: start; gap: 2px; box-shadow: 0 5px 18px #102c3608; }
 .stat span { font-size: .9rem; color: var(--muted); font-weight: 650; }
 .stat strong { font-size: 2rem; letter-spacing: -.05em; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -65,6 +71,7 @@ h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.
 .priority-non-pareto { color: #455e68; background: #edf2f4; }
 .priority-no-sales { color: #795008; background: #fff2d3; }
 .inventory { margin-top: 24px; background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+#inventory-view .inventory { margin-top: 0; }
 .inventory-head, .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 17px 20px; }
 .inventory-head { padding-top: 21px; padding-bottom: 12px; }
 .inventory-head h2 { margin: 0 0 4px; font-size: 1.42rem; letter-spacing: -.025em; }
@@ -116,7 +123,8 @@ tbody tr:hover { background: #f8fbfb; }
   .wrap { width: calc(100% - 28px); }
   .masthead { padding: 14px 0; flex-wrap: wrap; }
   .hero { padding-bottom: 68px; }
-  .stats { gap: 8px; margin-top: -38px; }
+  .view-nav { margin-top: -38px; }
+  .stats { gap: 8px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { padding: 10px; min-height: 113px; }
   .stat strong { font-size: 1.65rem; }
