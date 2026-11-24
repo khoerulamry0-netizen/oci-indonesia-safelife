@@ -75,6 +75,7 @@ export function summarize(product, today = jakartaDay()) {
     averageMonthlySales: sales?.monthly ?? null,
     averageWeeklySales: sales?.weekly ?? null,
     averageDailySales: sales?.daily ?? null,
+    stockCoverDays: sales?.daily > 0 ? stock / sales.daily : null,
     expiries: dated.map(([days, qty]) => ({ days, qty, date: new Date(today + days * dayMs) })),
   };
 }

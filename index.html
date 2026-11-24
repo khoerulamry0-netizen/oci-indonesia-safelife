@@ -11,7 +11,7 @@
 <body>
   <header class="hero">
     <div class="wrap">
-      <div class="masthead"><span class="brand"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><circle cx="22.5" cy="21.5" r="7" fill="#f8e8d9"/><circle cx="22.5" cy="21.5" r="4.8" fill="#f19b83"/><rect x="5" y="16" width="10" height="10" rx="2" fill="#f8e8d9"/><rect x="7" y="11" width="6" height="6" rx="1" fill="#f07062"/><rect x="8.5" y="7" width="3" height="5" rx="1" fill="#ffd7bd"/><path d="M5 26h10" stroke="#102c36" stroke-width="1.5" stroke-linecap="round"/></svg></span> O.Two.O</span><span class="demo" id="source-label">Google Sheets · Online</span><span class="language-switch" role="group" aria-label="Language"><button type="button" id="language-id" aria-pressed="true">ID</button><button type="button" id="language-en" aria-pressed="false">EN</button></span></div>
+      <div class="masthead"><span class="brand"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32" role="img"><circle cx="22.5" cy="21.5" r="7" fill="#f8e8d9"/><circle cx="22.5" cy="21.5" r="4.8" fill="#f19b83"/><rect x="5" y="16" width="10" height="10" rx="2" fill="#f8e8d9"/><rect x="7" y="11" width="6" height="6" rx="1" fill="#f07062"/><rect x="8.5" y="7" width="3" height="5" rx="1" fill="#ffd7bd"/><path d="M5 26h10" stroke="#102c36" stroke-width="1.5" stroke-linecap="round"/></svg></span> O.Two.O</span><span class="demo" id="source-label">Google Sheets · Online</span><span class="sync-status" id="sync-status" aria-live="polite">Sinkronisasi data…</span><span class="language-switch" role="group" aria-label="Language"><button type="button" id="language-id" aria-pressed="true">ID</button><button type="button" id="language-en" aria-pressed="false">EN</button></span></div>
       <h1 id="page-title" data-i18n="title">OCI Marketing Control Tower</h1>
       <p id="page-subtitle" data-i18n="subtitle">Pantau stok, risiko expired, dan peluang promosi berbasis data.</p>
     </div>
@@ -21,6 +21,7 @@
       <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
       <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
       <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal stok berisiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
+      <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
       <article class="stat missing-stat"><span data-i18n="incomplete_sales">Data sales belum lengkap</span><strong id="missing-count">0</strong><small data-i18n="sku_per_channel">SKU per channel</small></article>
     </section>
     <section class="inventory" aria-labelledby="inventory-title">
@@ -74,6 +75,11 @@
             </label>
           </div>
         </div>
+        <div class="pareto-summary" id="pareto-summary" aria-live="polite">
+          <div class="pareto-summary-head"><strong data-i18n="pareto_summary_title">Pareto nilai risiko</strong><span id="pareto-summary-label">—</span></div>
+          <div class="pareto-bar" role="img" aria-label="Ringkasan Pareto"><span id="pareto-bar-core"></span><span id="pareto-bar-rest"></span></div>
+          <small data-i18n="pareto_summary_description">Bagian hijau menunjukkan porsi nilai risiko yang berasal dari SKU prioritas Pareto.</small>
+        </div>
         <div class="priority-table-wrap" tabindex="0" role="region" aria-label="Top 10 prioritas promo">
           <table class="priority-table">
             <thead><tr><th scope="col" data-i18n="product_sku">Produk / SKU</th><th scope="col" data-i18n="pareto">Pareto</th><th scope="col" data-i18n="nearest_expiry">ED terdekat</th><th scope="col" class="numeric" data-i18n="risk_qty">Qty risiko</th><th scope="col" class="numeric" data-i18n="risk_value">Modal risiko</th><th scope="col" class="numeric" data-i18n="monthly_sales">Sales / bulan</th><th scope="col" data-i18n="recommended_action">Rekomendasi aksi</th></tr></thead>
@@ -83,7 +89,7 @@
       </section>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
-          <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
+          <thead><tr><th scope="col" data-i18n="product_sku_id">Produk / SKU ID</th><th scope="col" data-i18n="channel">Channel</th><th scope="col" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th><th scope="col" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric" data-i18n="average_monthly_sales">Rata-rata sales<br>per bulan</th><th scope="col" class="numeric" data-i18n="average_daily_sales">Rata-rata sales<br>per hari</th><th scope="col" class="numeric" data-i18n="average_weekly_sales">Rata-rata sales<br>per minggu</th><th scope="col" class="numeric" data-i18n="stock_cover">Stock cover<br>(hari)</th><th scope="col" data-i18n="expiry_date_qty">Expired date / qty</th><th scope="col" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th><th scope="col" data-i18n="risk_status">Status risiko</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>

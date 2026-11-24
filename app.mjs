@@ -10,6 +10,8 @@ const translations = {
     pcs_fefo: 'pcs · estimasi FEFO',
     at_risk_value: 'Modal stok berisiko expired',
     cost_times_risk: 'product cost × qty risiko',
+    urgent_expiry: 'Risiko ED ≤30 hari',
+    urgent_expiry_detail: 'SKU berisiko',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
     inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.',
@@ -44,6 +46,9 @@ const translations = {
     risk_value: 'Modal risiko',
     monthly_sales: 'Sales / bulan',
     recommended_action: 'Rekomendasi aksi',
+    pareto_summary_title: 'Pareto nilai risiko',
+    pareto_summary_description: 'Bagian hijau menunjukkan porsi nilai risiko yang berasal dari SKU prioritas Pareto.',
+    pareto_value_label: '{count} SKU · {percent}% nilai risiko',
     product_sku_id: 'Produk / SKU ID',
     channel: 'Channel',
     available_stock: 'Stok<br>tersedia',
@@ -51,6 +56,7 @@ const translations = {
     average_monthly_sales: 'Rata-rata sales<br>per bulan',
     average_weekly_sales: 'Rata-rata sales<br>per minggu',
     average_daily_sales: 'Rata-rata sales<br>per hari',
+    stock_cover: 'Stock cover<br>(hari)',
     expiry_date_qty: 'Expired date / qty',
     expired_risk_pcs: 'Risiko expired<br>(pcs)',
     risk_status_header: 'Status risiko',
@@ -79,6 +85,9 @@ const translations = {
     scheduled_campaign_detail: 'Masukkan kalender promo',
     no_sales_status: 'Tidak ada penjualan',
     no_expiry_status: 'Tidak ada ED',
+    syncing_data: 'Sinkronisasi data…',
+    synced_at: 'Tersinkronisasi {time}',
+    sync_issue: 'Sinkronisasi perlu diperiksa',
   },
   en: {
     title: 'OCI Marketing Control Tower',
@@ -89,6 +98,8 @@ const translations = {
     pcs_fefo: 'pcs · FEFO estimate',
     at_risk_value: 'Value of stock at expiry risk',
     cost_times_risk: 'product cost × risk qty',
+    urgent_expiry: 'Expiry risk ≤30 days',
+    urgent_expiry_detail: 'SKUs at risk',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
     inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, the latest 6-month average sales, and PARETO OFFLINE. Cost for both channels is mapped from the Master Cost tab.',
@@ -123,6 +134,9 @@ const translations = {
     risk_value: 'Risk value',
     monthly_sales: 'Sales / month',
     recommended_action: 'Recommended action',
+    pareto_summary_title: 'Risk value Pareto',
+    pareto_summary_description: 'The green section shows the share of risk value contributed by Pareto priority SKUs.',
+    pareto_value_label: '{count} SKUs · {percent}% of risk value',
     product_sku_id: 'Product / SKU ID',
     channel: 'Channel',
     available_stock: 'Available<br>stock',
@@ -130,6 +144,7 @@ const translations = {
     average_monthly_sales: 'Average sales<br>per month',
     average_weekly_sales: 'Average sales<br>per week',
     average_daily_sales: 'Average sales<br>per day',
+    stock_cover: 'Stock cover<br>(days)',
     expiry_date_qty: 'Expiry date / qty',
     expired_risk_pcs: 'Expiry risk<br>(pcs)',
     risk_status_header: 'Risk status',
@@ -158,6 +173,9 @@ const translations = {
     scheduled_campaign_detail: 'Add to promotion calendar',
     no_sales_status: 'No sales',
     no_expiry_status: 'No expiry date',
+    syncing_data: 'Syncing data…',
+    synced_at: 'Synced {time}',
+    sync_issue: 'Sync needs attention',
   },
 };
 
@@ -166,6 +184,7 @@ let number;
 let salesNumber;
 let rupiah;
 let date;
+let syncDate;
 
 function t(key) {
   return translations[locale][key] ?? translations.id[key] ?? key;
@@ -180,6 +199,9 @@ function resetFormatters() {
   date = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'id-ID', {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
   });
+  syncDate = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'id-ID', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 resetFormatters();
@@ -189,6 +211,7 @@ let offlineRecords = [];
 let onlineRecords = [];
 let offlineState = 'loading';
 let onlineState = 'loading';
+let lastSyncAt = null;
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
@@ -197,6 +220,7 @@ const urgencyFilter = document.getElementById('urgency-filter');
 const prioritySort = document.getElementById('priority-sort');
 const paretoFilter = document.getElementById('pareto-filter');
 const exportExcelButton = document.getElementById('export-excel');
+const syncStatus = document.getElementById('sync-status');
 const languageButtons = {
   id: document.getElementById('language-id'),
   en: document.getElementById('language-en'),
@@ -227,6 +251,10 @@ function salesFormat(value) {
   return Number.isFinite(value) ? salesNumber.format(value) : '—';
 }
 
+function stockCoverFormat(value) {
+  return Number.isFinite(value) && value >= 0 ? salesNumber.format(value) : '—';
+}
+
 function marketingAction(record) {
   if (record.daysLeft !== null && record.daysLeft <= 30) return [t('promo_now'), 'priority-urgent', t('promo_now_detail')];
   if (record.daysLeft !== null && record.daysLeft <= 60) return [t('high_priority'), 'priority-high', t('high_priority_detail')];
@@ -243,6 +271,21 @@ function paretoLabel(value) {
   if (value === 'Non Pareto') return t('non_pareto');
   if (value === 'Tidak ada penjualan') return t('no_sales_status');
   return value || t('unmapped');
+}
+
+function updateSyncStatus() {
+  syncStatus.classList.remove('is-ready', 'is-error');
+  if (offlineState === 'loading' || onlineState === 'loading') {
+    syncStatus.textContent = t('syncing_data');
+    return;
+  }
+  if (offlineState === 'error' || onlineState === 'error') {
+    syncStatus.textContent = t('sync_issue');
+    syncStatus.classList.add('is-error');
+    return;
+  }
+  syncStatus.textContent = t('synced_at').replace('{time}', syncDate.format(lastSyncAt ?? new Date()));
+  syncStatus.classList.add('is-ready');
 }
 
 function applyLanguage() {
@@ -264,6 +307,7 @@ function applyLanguage() {
   document.querySelector('.table-wrap').setAttribute('aria-label', t('inventory_title'));
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
+  updateSyncStatus();
 }
 
 function visibleRecords() {
@@ -288,7 +332,7 @@ function escapeHtml(value) {
 
 function exportExcelFile() {
   const visible = visibleRecords();
-  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
+  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('stock_cover').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
   const rows = visible.map(record => {
     const riskValue = pricedRiskValue(record);
     const [riskLabel] = statusOf(record);
@@ -301,6 +345,7 @@ function exportExcelFile() {
       salesFormat(record.averageMonthlySales),
       salesFormat(record.averageDailySales),
       salesFormat(record.averageWeeklySales),
+      stockCoverFormat(record.stockCoverDays),
       expiryText(record),
       record.risk === null ? '—' : number.format(record.risk),
       riskLabel,
@@ -321,6 +366,32 @@ function exportExcelFile() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function drawParetoSummary(visible) {
+  const candidates = visible
+    .map(record => ({ record, value: pricedRiskValue(record) }))
+    .filter(item => item.record.risk > 0 && Number.isFinite(item.value) && item.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const total = candidates.reduce((sum, item) => sum + item.value, 0);
+  let running = 0;
+  let coreValue = 0;
+  let coreCount = 0;
+  for (const item of candidates) {
+    running += item.value;
+    if (coreCount === 0 || running - item.value < total * 0.8) {
+      coreValue += item.value;
+      coreCount += 1;
+    }
+  }
+  const percentage = total > 0 ? Math.min(100, coreValue / total * 100) : 0;
+  document.getElementById('pareto-summary-label').textContent = total > 0
+    ? t('pareto_value_label')
+      .replace('{count}', number.format(coreCount))
+      .replace('{percent}', salesNumber.format(percentage))
+    : '—';
+  document.getElementById('pareto-bar-core').style.width = percentage + '%';
+  document.getElementById('pareto-bar-rest').style.width = (100 - percentage) + '%';
 }
 
 function drawPriorities(visible) {
@@ -409,14 +480,23 @@ function draw() {
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
   const totalRiskValue = pricedRisk.reduce((total, record) => total + pricedRiskValue(record), 0);
+  const urgent = visible.filter(record => record.risk > 0 && record.daysLeft !== null && record.daysLeft <= 30);
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? rupiah.format(totalRiskValue) : '\u2014';
+  document.getElementById('urgent-count').textContent = number.format(urgent.length);
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
-  if (searchActive) priorityRows.replaceChildren();
-  else drawPriorities(visible);
+  if (searchActive) {
+    priorityRows.replaceChildren();
+    document.getElementById('pareto-summary-label').textContent = '—';
+    document.getElementById('pareto-bar-core').style.width = '0%';
+    document.getElementById('pareto-bar-rest').style.width = '100%';
+  } else {
+    drawParetoSummary(visible);
+    drawPriorities(visible);
+  }
   tableRows.replaceChildren();
 
   if (!visible.length) {
@@ -426,7 +506,7 @@ function draw() {
     if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
     if (channel === 'Online' && onlineState === 'error') label = t('online_error');
     const message = cell(tableRows.insertRow(), label, 'empty');
-    message.colSpan = 10;
+    message.colSpan = 11;
   }
 
   for (const record of visible) {
@@ -445,6 +525,7 @@ function draw() {
     cell(row, salesFormat(record.averageMonthlySales), 'numeric');
     cell(row, salesFormat(record.averageDailySales), 'numeric');
     cell(row, salesFormat(record.averageWeeklySales), 'numeric');
+    cell(row, stockCoverFormat(record.stockCoverDays), 'numeric');
     expiryCell(row, record);
     cell(row, record.risk === null ? '\u2014' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
     const [label, statusClass] = statusOf(record);
@@ -499,6 +580,8 @@ async function refreshOffline() {
     offlineRecords = [];
     offlineState = 'error';
   }
+  if (offlineState === 'ready') lastSyncAt = new Date();
+  updateSyncStatus();
   mergeRecords();
 }
 
@@ -509,6 +592,7 @@ async function refreshOnline() {
     const rows = await response.json();
     onlineRecords = rows.map(row => ({
       ...row, channel:'Online', productCost: row.productCost == null ? null : Number(row.productCost),
+      stockCoverDays: Number(row.averageDailySales) > 0 ? Number(row.stock) / Number(row.averageDailySales) : null,
       expiries:row.expiries.map(e => ({...e, date:new Date(e.date + 'T00:00:00Z')}))
     }));
     onlineState = 'ready';
@@ -517,6 +601,8 @@ async function refreshOnline() {
     onlineRecords = [];
     onlineState = 'error';
   }
+  if (onlineState === 'ready') lastSyncAt = new Date();
+  updateSyncStatus();
   mergeRecords();
 }
 
