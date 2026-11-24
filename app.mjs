@@ -82,6 +82,8 @@ function draw() {
 
   for (const record of visible) {
     const row = tableRows.insertRow();
+    const riskValue = Number.isFinite(record.risk) && Number.isFinite(record.productCost)
+      ? record.risk * record.productCost : null;
     const product = cell(row, '', 'product');
     const title = document.createElement('strong');
     title.textContent = record.name;
@@ -90,8 +92,8 @@ function draw() {
     product.append(title, sku);
     cell(row, record.channel);
     cell(row, number.format(record.stock), 'numeric');
-    cell(row, Number.isFinite(record.productCost)
-      ? rupiah.format(record.productCost) : '\u2014', 'numeric');
+    cell(row, Number.isFinite(riskValue)
+      ? rupiah.format(riskValue) : '\u2014', 'numeric');
     cell(row, Number.isFinite(record.averageMonthlySales)
       ? number.format(Math.round(record.averageMonthlySales)) : '\u2014', 'numeric');
     expiryCell(row, record);
