@@ -103,3 +103,109 @@ tbody tr:hover { background: #f8fbfb; }
 .export-button { min-height: 36px; padding: 7px 12px; border: 1px solid #bccecf; border-radius: 7px; background: #fff; color: var(--teal); font: inherit; font-size: .875rem; font-weight: 750; cursor: pointer; }
 .export-button:hover { background: #eaf5f2; }
 .toolbar { flex-wrap: wrap; }
+
+/* Rose Executive theme: softer brand expression with the same data controls. */
+body.rose-theme {
+  background: #f8c9d9;
+  color: #3f2634;
+}
+body.rose-theme .hero {
+  background: linear-gradient(135deg, #61253f 0%, #7c284d 58%, #a33d67 100%);
+  padding-bottom: 72px;
+}
+body.rose-theme .masthead { border-color: #a45b77; }
+body.rose-theme .demo { color: #ffeaf1; border-color: #b77791; background: #712d4a; }
+body.rose-theme .sync-status { color: #ffd9e7; }
+body.rose-theme .sync-status.is-ready { color: #ffd3e2; }
+body.rose-theme .language-switch { border-color: #a45b77; background: #712d4a; }
+body.rose-theme .language-switch button { color: #ffeaf1; }
+body.rose-theme .language-switch button[aria-pressed="true"] { background: #f08fb1; color: #61253f; }
+body.rose-theme .language-switch button:hover:not([aria-pressed="true"]) { background: #8f3e60; }
+body.rose-theme .hero p { color: #ffe8f0; }
+body.rose-theme .stats { margin-top: -28px; }
+body.rose-theme .stat {
+  background: #fff8fb;
+  border-color: #efb2c9;
+  border-radius: 15px;
+  box-shadow: 0 12px 30px #7c284d20;
+}
+body.rose-theme .stat span,
+body.rose-theme .stat small { color: #765262; }
+body.rose-theme .risk-stat strong,
+body.rose-theme .urgency-stat strong { color: #a33d67; }
+body.rose-theme .risk-value-stat strong { color: #8d3158; }
+body.rose-theme .inventory {
+  margin-top: 24px;
+  background: #fff8fb;
+  border-color: #efb2c9;
+  border-radius: 18px;
+  box-shadow: 0 16px 42px #7c284d16;
+}
+body.rose-theme .inventory-head { background: #fff1f6; }
+body.rose-theme .inventory-head h2 { color: #4b2639; font-size: 1.55rem; }
+body.rose-theme .inventory-head p,
+body.rose-theme .toolbar > span { color: #765262; }
+body.rose-theme .search input {
+  border-color: #e7bfd0;
+  background: #fffafd;
+  color: #3f2634;
+}
+body.rose-theme .search-icon { border-color: #a45b77; }
+body.rose-theme .search-icon::after { background: #a45b77; }
+body.rose-theme .toolbar {
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 16px;
+  background: #fff1f6;
+  border-top: 1px solid #efc9d7;
+}
+body.rose-theme .filters {
+  background: #fbd9e5;
+  border-color: #efb2c9;
+}
+body.rose-theme .filters button { color: #8f4864; }
+body.rose-theme .filters [aria-pressed="true"] {
+  background: #a33d67;
+  color: #fff;
+}
+body.rose-theme .filters button:hover:not([aria-pressed="true"]) { background: #f3c2d4; }
+body.rose-theme .risk-picker { color: #765262; }
+body.rose-theme .risk-picker select {
+  color: #4b2639;
+  border-color: #e7bfd0;
+  background-color: #fffafd;
+}
+body.rose-theme .export-button {
+  border-color: #d99ab4;
+  background: #fffafd;
+  color: #9a315d;
+}
+body.rose-theme .export-button:hover { background: #fbd9e5; }
+body.rose-theme th {
+  background: #f9e3eb;
+  color: #75485b;
+  border-color: #efc9d7;
+}
+body.rose-theme th,
+body.rose-theme td { border-color: #efc9d7; }
+body.rose-theme table th:first-child { background: #f9e3eb; }
+body.rose-theme table th:first-child,
+body.rose-theme table td:first-child { box-shadow: 5px 0 8px -9px #7c284d; }
+body.rose-theme table td:first-child { background: #fff8fb; }
+body.rose-theme tbody tr:hover td:first-child,
+body.rose-theme tbody tr:hover { background: #fff1f6; }
+body.rose-theme .status.at-risk { color: #9a315d; background: #ffe2eb; }
+body.rose-theme .status.clear { color: #14715c; background: #e3f4ec; }
+body.rose-theme .status.missing { color: #8b5b13; background: #fff0d4; }
+body.rose-theme .status.no-date { color: #765262; background: #f4e9ee; }
+body.rose-theme .method { color: #765262; }
+body.rose-theme .method summary { color: #9a315d; }
+body.rose-theme :focus-visible { outline-color: #b94d78; }
+@media (max-width: 670px) {
+  body.rose-theme .hero { padding-bottom: 64px; }
+  body.rose-theme .stats { margin-top: -22px; }
+  body.rose-theme .inventory { margin-top: 16px; }
+  body.rose-theme .inventory-head,
+  body.rose-theme .toolbar { background: #fff1f6; }
+}
