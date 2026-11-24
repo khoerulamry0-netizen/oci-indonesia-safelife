@@ -13,6 +13,7 @@ const monthlySalesGid = '953675285';
 const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
 const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
+const paretoGid = '1197311588';
 const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -78,13 +79,20 @@ function columnIndex(row, name) {
 
 function parseNumber(value) {
   const text = String(value ?? '').trim();
-  if (!text || text === '-' || text === 'â€”') return 0;
+  if (!text || text === '-' || text === '—') return 0;
   const normalizedText = text.replace(/\s/g, '');
   if (normalizedText.includes(',') && normalizedText.includes('.')) {
     return Number(normalizedText.replace(/\./g, '').replace(',', '.'));
   }
   if (normalizedText.includes(',')) return Number(normalizedText.replace(',', '.'));
   return Number(normalizedText);
+}
+
+function parsePercent(value) {
+  const text = String(value ?? '').trim().replace(/%/g, '');
+  if (!text || text === '-' || text === '—') return null;
+  const parsed = parseNumber(text);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function parseExpiry(value) {
@@ -115,7 +123,7 @@ async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
 
 function parseRupiah(value) {
   const text = String(value ?? '').trim();
-  if (!text || text === '-' || text === 'â€”') return 0;
+  if (!text || text === '-' || text === '—') return 0;
   const digits = text.replace(/[^\d-]/g, '');
   const number = Number(digits);
   return Number.isFinite(number) ? number : null;
@@ -152,6 +160,28 @@ function buildOnlineAverageMap(rows) {
     if (Number.isFinite(weekly) && weekly >= 0) averages.set(sku, weekly);
   }
   return averages;
+}
+
+function buildParetoMap(rows) {
+  const headerIndex = findHeader(rows, ['SKU', 'Pareto Status']);
+  if (headerIndex < 0) throw new Error('PARETO STATUS headers not found');
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU');
+  const statusIndex = columnIndex(header, 'Pareto Status');
+  const contributionIndex = columnIndex(header, 'Kontribusi Sales (%)');
+  const rankIndex = columnIndex(header, 'Rank');
+  const pareto = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = String(row[skuIndex] ?? '').trim().toUpperCase();
+    if (!sku || pareto.has(sku)) continue;
+    pareto.set(sku, {
+      status: String(row[statusIndex] ?? '').trim() || null,
+      contribution: contributionIndex >= 0 ? parsePercent(row[contributionIndex]) : null,
+      rank: rankIndex >= 0 ? parseNumber(row[rankIndex]) : null,
+    });
+  }
+  if (!pareto.size) throw new Error('PARETO STATUS returned no usable rows');
+  return pareto;
 }
 
 function buildOfflineRecords(clusteringRows, salesRows) {
@@ -245,21 +275,26 @@ async function offlineData(res) {
 
 async function proxyOnline(res) {
   try {
-    const [response, costRows, summaryRows] = await Promise.all([
+    const [response, costRows, summaryRows, paretoRows] = await Promise.all([
       fetch(upstream, { headers: { accept: 'application/json' } }),
       fetchCsv(masterCostGid, onlineSpreadsheetId),
       fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
+      fetchCsv(paretoGid, onlineSpreadsheetId),
     ]);
     if (!response.ok) throw new Error('Upstream returned ' + response.status);
     const rows = JSON.parse(await response.text());
     if (!Array.isArray(rows)) throw new Error('Online data returned invalid JSON');
     const costs = buildMasterCostMap(costRows);
     const averages = buildOnlineAverageMap(summaryRows);
+    const pareto = buildParetoMap(paretoRows);
     const enriched = rows.map(row => ({
       ...row,
       productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
       averageMonthlySales: averages.has(String(row.sku ?? '').trim())
         ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
+      paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
+      paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
+      paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
     }));
     send(res, 200, JSON.stringify(enriched), 'application/json; charset=utf-8');
   } catch (error) {
