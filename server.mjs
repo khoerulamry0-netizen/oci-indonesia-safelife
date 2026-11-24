@@ -10,6 +10,8 @@ const upstream = 'https://oci-indonesia.verdantspark1.chatgpt.site/api/online';
 const spreadsheetId = '1RpLHOzhQd58zO2NvIoubybaHiXNavWGczVOa5fzS-m0';
 const clusteringOfflineGid = '211915398';
 const monthlySalesGid = '953675285';
+const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
+const masterCostGid = '686994777';
 const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -101,12 +103,38 @@ function sixMonthsEndingThisMonth() {
   return Array.from({length: 6}, (_, index) => monthNames[(currentMonth - 5 + index + 12) % 12]);
 }
 
-async function fetchCsv(gid) {
-  const response = await fetch(spreadsheetExport + gid + '&cachebust=' + Date.now(), { cache: 'no-store' });
+async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
+  const exportUrl = 'https://docs.google.com/spreadsheets/d/' + sourceSpreadsheetId + '/export?format=csv&gid=';
+  const response = await fetch(exportUrl + gid + '&cachebust=' + Date.now(), { cache: 'no-store' });
   if (!response.ok) throw new Error('Google Sheets returned ' + response.status);
   const text = await response.text();
   if (!text.trim() || /<html[\s>]/i.test(text)) throw new Error('Google Sheets did not return CSV data');
   return parseCsv(text);
+}
+
+function parseRupiah(value) {
+  const text = String(value ?? '').trim();
+  if (!text || text === '-' || text === 'â€”') return 0;
+  const digits = text.replace(/[^\d-]/g, '');
+  const number = Number(digits);
+  return Number.isFinite(number) ? number : null;
+}
+
+function buildMasterCostMap(rows) {
+  const headerIndex = findHeader(rows, ['SKU', 'Product Cost (Rp)']);
+  if (headerIndex < 0) throw new Error('Master Cost headers not found');
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU');
+  const costIndex = columnIndex(header, 'Product Cost (Rp)');
+  const costs = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = String(row[skuIndex] ?? '').trim();
+    if (!sku || costs.has(sku)) continue;
+    const cost = parseRupiah(row[costIndex]);
+    if (cost !== null) costs.set(sku, cost);
+  }
+  if (!costs.size) throw new Error('Master Cost returned no usable rows');
+  return costs;
 }
 
 function buildOfflineRecords(clusteringRows, salesRows) {
@@ -193,9 +221,19 @@ async function offlineData(res) {
 
 async function proxyOnline(res) {
   try {
-    const response = await fetch(upstream, { headers: { accept: 'application/json' } });
+    const [response, costRows] = await Promise.all([
+      fetch(upstream, { headers: { accept: 'application/json' } }),
+      fetchCsv(masterCostGid, onlineSpreadsheetId),
+    ]);
     if (!response.ok) throw new Error('Upstream returned ' + response.status);
-    send(res, 200, await response.text(), 'application/json; charset=utf-8');
+    const rows = JSON.parse(await response.text());
+    if (!Array.isArray(rows)) throw new Error('Online data returned invalid JSON');
+    const costs = buildMasterCostMap(costRows);
+    const enriched = rows.map(row => ({
+      ...row,
+      productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
+    }));
+    send(res, 200, JSON.stringify(enriched), 'application/json; charset=utf-8');
   } catch (error) {
     console.error('online data proxy failed:', error.message);
     send(res, 502, JSON.stringify({ error: 'Online data unavailable' }), 'application/json; charset=utf-8');
