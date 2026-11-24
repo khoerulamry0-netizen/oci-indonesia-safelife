@@ -49,15 +49,16 @@ h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.
 .filters [aria-pressed="true"] { background: var(--teal); color: #fff; }
 .filters button:hover:not([aria-pressed="true"]) { background: #dceae8; }
 :focus-visible { outline: 2px solid #147c70; outline-offset: 2px; }
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow: visible; position: relative; }
 .table-wrap:focus-visible { outline-offset: -2px; }
+.table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; text-align: left; min-width: 820px; }
 table { min-width: 1160px; }
 th, td { padding: 13px 12px; border-top: 1px solid var(--border); font-size: .875rem; }
 th:first-child, td:first-child { padding-left: 20px; }
 th:last-child, td:last-child { padding-right: 20px; }
 th { background: #f2f7f7; color: #455e68; font-weight: 700; vertical-align: bottom; }
-table th { position: sticky; top: 0; z-index: 2; }
+table th { position: static; }
 table th:first-child, table td:first-child { position: sticky; left: 0; z-index: 3; background: #fff; box-shadow: 5px 0 8px -9px #102c36; }
 table th:first-child { background: #f2f7f7; }
 table tbody tr:hover td:first-child { background: #f8fbfb; }
@@ -103,6 +104,18 @@ tbody tr:hover { background: #f8fbfb; }
 .export-button { min-height: 36px; padding: 7px 12px; border: 1px solid #bccecf; border-radius: 7px; background: #fff; color: var(--teal); font: inherit; font-size: .875rem; font-weight: 750; cursor: pointer; }
 .export-button:hover { background: #eaf5f2; }
 .toolbar { flex-wrap: wrap; }
+
+.sticky-table-head {
+  display: none;
+  position: fixed;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+  background: #f2f7f7;
+}
+.sticky-table-head.is-visible { display: block; }
+.sticky-table-head table { margin: 0; }
+.sticky-table-head th { position: static; }
 
 /* Rose Executive theme: softer brand expression with the same data controls. */
 body.rose-theme {
@@ -215,6 +228,10 @@ body.rose-theme .inventory-controls {
 body.rose-theme .inventory-controls .inventory-head,
 body.rose-theme .inventory-controls .toolbar { background: #fff1f6; }
 body.rose-theme .inventory-controls + .table-wrap { border-radius: 0 0 18px 18px; }
+body.rose-theme .sticky-table-head { background: #f9e3eb; }
+body.rose-theme .sticky-table-head th,
+body.rose-theme .sticky-table-head td { border-color: #efc9d7; }
+body.rose-theme .sticky-table-head th { background: #f9e3eb; color: #75485b; }
 @media (max-width: 670px) {
   body.rose-theme .hero { padding-bottom: 64px; }
   body.rose-theme .stats { margin-top: -22px; }

@@ -279,6 +279,9 @@ let lastSyncAt = null;
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
+const tableWrap = document.querySelector('.table-wrap');
+const tableScroll = document.querySelector('.table-scroll');
+const stickyTableHead = document.getElementById('sticky-table-head');
 const urgencyFilter = document.getElementById('urgency-filter');
 const expiryRangeFilter = document.getElementById('expiry-range-filter');
 const stockCoverFilter = document.getElementById('stock-cover-filter');
@@ -296,6 +299,45 @@ const languageButtons = {
   en: document.getElementById('language-en'),
 };
 let channel = 'Online';
+
+function setupStickyTableHeader() {
+  const sourceTable = tableScroll?.querySelector('table');
+  const sourceHead = sourceTable?.querySelector('thead');
+  if (!tableWrap || !tableScroll || !sourceTable || !sourceHead || !stickyTableHead) return;
+
+  const stickyTable = sourceTable.cloneNode(false);
+  stickyTable.append(sourceHead.cloneNode(true));
+  stickyTableHead.replaceChildren(stickyTable);
+
+  const sync = () => {
+    const controls = document.querySelector('.inventory-controls');
+    const controlsHeight = controls?.getBoundingClientRect().height ?? 0;
+    const wrapRect = tableWrap.getBoundingClientRect();
+    const sourceHeadRect = sourceHead.getBoundingClientRect();
+    const sourceTableWidth = Math.max(sourceTable.getBoundingClientRect().width, sourceTable.scrollWidth);
+    const isInTable = wrapRect.top <= controlsHeight && wrapRect.bottom > controlsHeight + sourceHeadRect.height;
+
+    stickyTableHead.style.top = controlsHeight + 'px';
+    stickyTableHead.style.left = wrapRect.left + 'px';
+    stickyTableHead.style.width = wrapRect.width + 'px';
+    stickyTableHead.style.height = sourceHeadRect.height + 'px';
+    stickyTable.style.width = sourceTableWidth + 'px';
+    stickyTable.style.minWidth = sourceTableWidth + 'px';
+    stickyTable.style.transform = 'translateX(-' + tableScroll.scrollLeft + 'px)';
+    stickyTableHead.classList.toggle('is-visible', isInTable);
+
+    const sourceCells = sourceHead.querySelectorAll('th');
+    const stickyCells = stickyTable.querySelectorAll('th');
+    sourceCells.forEach((cell, index) => {
+      if (stickyCells[index]) stickyCells[index].style.width = cell.getBoundingClientRect().width + 'px';
+    });
+  };
+
+  tableScroll.addEventListener('scroll', sync, {passive: true});
+  window.addEventListener('scroll', sync, {passive: true});
+  window.addEventListener('resize', sync);
+  sync();
+}
 
 function cell(row, value, className = '') {
   const td = row.insertCell();
@@ -657,6 +699,7 @@ resetFiltersButton.addEventListener('click', () => {
   draw();
 });
 applyLanguage();
+setupStickyTableHeader();
 draw();
 
 async function refreshOffline() {
