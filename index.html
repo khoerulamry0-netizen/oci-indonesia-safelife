@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Prototipe pemantauan stok dan risiko expired untuk tim marketing.">
+  <title>SWC &amp; Safelife</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="masthead"><span class="brand"><span class="brand-icon" aria-hidden="true">◈</span> SWC &amp; Safelife</span><span class="demo" id="source-label">Google Sheets · Online</span></div>
+      <h1>Pantau Safelife Stok</h1>
+      <p>Cek tanggal expired dan perkiraan sisa stok untuk prioritas promosi.</p>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="stats" aria-label="Ringkasan hasil">
+      <article class="stat"><span>SKU per channel</span><strong id="sku-count">0</strong></article>
+      <article class="stat risk-stat"><span>Stok berisiko expired</span><strong id="risk-count">0</strong><small>pcs · estimasi FEFO</small></article>
+      <article class="stat missing-stat"><span>Data sales belum lengkap</span><strong id="missing-count">0</strong><small>SKU per channel</small></article>
+    </section>
+    <section class="inventory" aria-labelledby="inventory-title">
+      <div class="inventory-head">
+        <div><h2 id="inventory-title">Daftar stok</h2><p>Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline memakai data contoh bulanan.</p></div>
+        <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
+      </div>
+      <div class="toolbar">
+        <div id="filters" class="filters" role="group" aria-label="Filter channel">
+          <button type="button" data-channel="Online" aria-pressed="true">Online</button>
+          <button type="button" data-channel="Offline" aria-pressed="false">Offline · contoh</button>
+        </div>
+        <label class="risk-picker">Status risiko
+          <select id="risk-filter">
+            <option value="">Semua status</option>
+            <option value="at-risk">Berisiko expired</option>
+            <option value="clear">Tidak ada estimasi risiko</option>
+            <option value="missing">Data sales belum lengkap</option>
+            <option value="no-date">Tidak ada ED</option>
+          </select>
+        </label>
+        <span id="result-count" role="status"></span>
+      </div>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
+        <table>
+          <thead><tr><th scope="col">Produk / SKU</th><th scope="col">Channel</th><th scope="col" class="numeric">Stok<br>tersedia</th><th scope="col">ED stok tersedia</th><th scope="col" class="numeric">Risiko expired<br>(pcs)</th><th scope="col">Status</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+    <details class="method">
+      <summary>Cara estimasi risiko expired</summary>
+      <p>FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Proyeksi memakai rata-rata penjualan per minggu. Rata-rata bulanan Offline dikonversi dengan mengalikan 12 lalu membagi 52. Angka 0 berarti periode sudah dicatat dan tidak ada penjualan. Periode kosong membuat estimasi ditahan.</p>
+    </details>
+  </main>
+</body>
+</html>
