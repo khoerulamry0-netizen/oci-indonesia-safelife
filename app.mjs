@@ -1,7 +1,15 @@
-import { filterPortfolio, portfolio } from './inventory.mjs';
+import { estimateExpiryRisk, filterPortfolio, jakartaDay, portfolio, riskWithin } from './inventory.mjs';
 
 const translations = {
   id: {
+    summary_channel: 'Ringkasan channel',
+    summary_filtered: 'Ringkasan hasil filter',
+    expired_stock: 'Stok sudah expired',
+    expired_source_unknown: 'Tidak tersedia dari sumber Online',
+    expired_qty: 'sudah expired',
+    batch_risk: 'berisiko',
+    batch_risk_unknown: 'Estimasi belum tersedia',
+    batch_method: 'Estimasi per tanggal memakai laju penjualan rata-rata. Stok yang sudah melewati ED dipisahkan dari stok tersedia dan estimasi risiko.',
     filter_button: 'Filter',
     average_sales: 'Rata-rata sales',
     day_unit: 'Hari',
@@ -23,7 +31,7 @@ const translations = {
     at_risk_value: 'Modal risiko expired',
     cost_times_risk: 'product cost × qty risiko',
     urgent_expiry: 'Risiko ED ≤30 hari',
-    urgent_expiry_detail: 'SKU berisiko',
+    urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
     inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.',
@@ -131,6 +139,14 @@ const translations = {
     sync_issue: 'Sinkronisasi perlu diperiksa',
   },
   en: {
+    summary_channel: 'Channel summary',
+    summary_filtered: 'Filtered results summary',
+    expired_stock: 'Already expired stock',
+    expired_source_unknown: 'Unavailable from Online source',
+    expired_qty: 'already expired',
+    batch_risk: 'at risk',
+    batch_risk_unknown: 'Estimate unavailable',
+    batch_method: 'Each expiry date is estimated using the average sales rate. Stock past its expiry date is reported separately from available stock and expiry risk.',
     filter_button: 'Filters',
     average_sales: 'Average sales',
     day_unit: 'Day',
@@ -152,7 +168,7 @@ const translations = {
     at_risk_value: 'Expiry risk value',
     cost_times_risk: 'product cost × risk qty',
     urgent_expiry: 'Expiry risk ≤30 days',
-    urgent_expiry_detail: 'SKUs at risk',
+    urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
     inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, the latest 6-month average sales, and PARETO OFFLINE. Cost for both channels is mapped from the Master Cost tab.',
@@ -317,6 +333,7 @@ const languageButtons = {
   en: document.getElementById('language-en'),
 };
 let channel = 'Online';
+let onlineReportsExpired = false;
 const mobileInventory = window.matchMedia('(max-width: 670px)');
 const stockCards = document.getElementById('stock-cards');
 const filterToggle = document.getElementById('filter-toggle');
@@ -395,6 +412,7 @@ function cell(row, value, className = '') {
 const riskFilter = document.getElementById('risk-filter');
 
 function statusOf(record) {
+  if (record.daysLeft === null && record.expiredStock > 0) return [t('expired_stock'), 'expired'];
   if (record.incomplete) return [t('incomplete_sales'), 'missing'];
   if (record.daysLeft === null) return [t('no_expiry_status'), 'no-date'];
   return record.risk > 0 ? [t('at_risk'), 'at-risk'] : [t('no_risk_estimate'), 'clear'];
@@ -543,8 +561,9 @@ function updateSkuCategoryVisibility() {
 
 function visibleRecords() {
   const visible = filterPortfolio(records, channel, search.value)
-    .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value)
-    .filter(record => !urgencyFilter.value || (record.daysLeft !== null && record.daysLeft <= Number(urgencyFilter.value)))
+    .filter(record => !riskFilter.value || (riskFilter.value === 'expired'
+      ? record.expiredStock > 0 : statusOf(record)[1] === riskFilter.value))
+    .filter(record => !urgencyFilter.value || riskWithin(record.expiries, Number(urgencyFilter.value)) > 0)
     .filter(record => !expiryRangeFilter.value || expiryRangeBand(record.daysLeft) === expiryRangeFilter.value)
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel !== 'Online' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
@@ -559,7 +578,8 @@ function visibleRecords() {
 }
 
 function expiryText(record) {
-  const labels = record.expiries.map(expiry => date.format(expiry.date) + ' · ' + number.format(expiry.qty) + ' pcs');
+  const labels = record.expiries.map(expiry =>
+    date.format(expiry.date) + ' · ' + number.format(expiry.qty) + ' pcs · ' + expiryRiskLabel(expiry));
   if (record.undatedStock) labels.push(t('without_expiry') + ' · ' + number.format(record.undatedStock) + ' pcs');
   return labels.join(' | ') || '—';
 }
@@ -613,7 +633,13 @@ function exportExcelFile() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function appendExpiry(list, label, qty, days) {
+function expiryRiskLabel(expiry) {
+  if (expiry.days < 0) return t('expired_qty');
+  if (expiry.riskQty === null) return t('batch_risk_unknown');
+  return number.format(expiry.riskQty) + ' pcs ' + t('batch_risk');
+}
+
+function appendExpiry(list, label, qty, days, riskLabel) {
   const entry = document.createElement('li');
   const dateLabel = document.createElement('strong');
   dateLabel.textContent = label;
@@ -622,6 +648,12 @@ function appendExpiry(list, label, qty, days) {
     ? number.format(qty) + ' pcs'
     : number.format(qty) + ' pcs \u00b7 ' + (days === 0 ? t('today') : number.format(days) + ' ' + t('days_left'));
   entry.append(dateLabel, detail);
+  if (riskLabel) {
+    const risk = document.createElement('span');
+    risk.className = 'batch-risk';
+    risk.textContent = riskLabel;
+    entry.append(risk);
+  }
   list.append(entry);
 }
 
@@ -631,7 +663,7 @@ function expiryCell(row, record) {
   const list = document.createElement('ul');
   list.className = 'expiry-list';
   for (const expiry of record.expiries) {
-    appendExpiry(list, date.format(expiry.date), expiry.qty, expiry.days);
+    appendExpiry(list, date.format(expiry.date), expiry.qty, expiry.days < 0 ? null : expiry.days, expiryRiskLabel(expiry));
   }
   if (record.undatedStock) appendExpiry(list, t('without_expiry'), record.undatedStock, null);
   td.replaceChildren(list);
@@ -654,7 +686,7 @@ function appendStockCard(row, record) {
   const heading = document.createElement('h3');
   heading.append(...product.childNodes);
   const overview = document.createElement('dl');
-  const firstExpiry = record.expiries[0];
+  const firstExpiry = record.expiries.find(expiry => expiry.days >= 0);
   appendCardField(overview, 'nearest_expiry_short', firstExpiry ? date.format(firstExpiry.date) : '—');
   appendCardField(overview, 'risk_qty_short', qty.textContent === '—' ? '—' : qty.textContent + ' pcs');
   appendCardField(overview, 'risk_value_short', value.textContent);
@@ -681,18 +713,26 @@ function draw() {
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
   const totalRiskValue = pricedRisk.reduce((total, record) => total + pricedRiskValue(record), 0);
-  const urgent = visible.filter(record => record.risk > 0 && record.daysLeft !== null && record.daysLeft <= 30);
+  const urgentQty = knownRisk.reduce((total, record) => total + riskWithin(record.expiries, 30), 0);
+  const expiredQty = visible.reduce((total, record) => total + (record.expiredStock ?? 0), 0);
+  const expiredAvailable = channel === 'Offline' ? offlineState === 'ready' : onlineReportsExpired;
+  document.getElementById('expired-count').textContent = expiredAvailable ? number.format(expiredQty) : '—';
+  document.getElementById('expired-detail').textContent = channel === 'Online' && !expiredAvailable
+    ? t('expired_source_unknown') : 'pcs';
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '\u2014';
-  document.getElementById('urgent-count').textContent = number.format(urgent.length);
+  document.getElementById('urgent-count').textContent = knownRisk.length ? number.format(urgentQty) : '—';
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
   const filterCount = [...advancedFilters.querySelectorAll('select')].filter(select =>
     select.value && select.value !== select.options[0].value
   ).length;
   activeFilterCount.hidden = filterCount === 0;
   activeFilterCount.textContent = ' (' + number.format(filterCount) + ')';
+  const dataFiltered = [...advancedFilters.querySelectorAll('select:not(#priority-sort)')].some(select => select.value);
+  document.getElementById('summary-context').textContent =
+    t(dataFiltered || search.value.trim() ? 'summary_filtered' : 'summary_channel') + ' · ' + channelLabel(channel);
   tableRows.replaceChildren();
   stockCards.replaceChildren();
 
@@ -832,16 +872,30 @@ async function refreshOnline() {
     const response = await fetch('/api/online', {cache:'no-store'});
     if (!response.ok) throw new Error('Feed unavailable');
     const rows = await response.json();
-    onlineRecords = rows.map(row => ({
-      ...row, channel:'Online', productCost: row.productCost == null ? null : Number(row.productCost),
-      stockCoverDays: Number(row.averageDailySales) > 0 ? Number(row.stock) / Number(row.averageDailySales) : null,
-      expiries:row.expiries.map(e => ({...e, date:new Date(e.date + 'T00:00:00Z')}))
-    }));
+    const today = jakartaDay();
+    onlineRecords = rows.map(row => {
+      const expiries = estimateExpiryRisk(row.expiries.map(expiry => {
+        const date = new Date(expiry.date + 'T00:00:00Z');
+        return { ...expiry, date, days: Math.round((date.getTime() - today) / 86_400_000) };
+      }), row.incomplete ? null : row.averageDailySales);
+      const daysLeft = expiries.find(expiry => expiry.days >= 0)?.days ?? null;
+      const expiredStock = expiries.reduce((total, expiry) => total + (expiry.days < 0 ? expiry.qty : 0), 0);
+      const stock = Number(row.stock) - expiredStock;
+      return {
+        ...row, channel: 'Online', daysLeft, expiries, expiredStock, stock,
+        incomplete: row.incomplete || (daysLeft !== null && row.averageDailySales == null),
+        risk: riskWithin(expiries, Infinity),
+        productCost: row.productCost == null ? null : Number(row.productCost),
+        stockCoverDays: row.averageDailySales > 0 ? stock / row.averageDailySales : null,
+      };
+    });
+    onlineReportsExpired = onlineRecords.some(record => record.expiredStock > 0);
     updateSkuCategoryOptions();
     onlineState = 'ready';
   } catch (error) {
     console.error(error);
     onlineRecords = [];
+    onlineReportsExpired = false;
     onlineState = 'error';
   }
   if (onlineState === 'ready') lastSyncAt = new Date();

@@ -46,37 +46,48 @@ function salesMetrics(product) {
   return { daily: averageWeekly / 7, weekly: averageWeekly, monthly: averageWeekly * 52 / 12 };
 }
 
+export function estimateExpiryRisk(expiries, dailySales) {
+  const sorted = [...expiries].sort((a, b) => a.days - b.days);
+  const canEstimate = Number.isFinite(dailySales) && dailySales >= 0;
+  let sold = 0;
+  return sorted.map(expiry => {
+    if (expiry.days < 0 || !canEstimate) return { ...expiry, riskQty: null };
+    const capacity = Math.floor(dailySales * expiry.days + 1e-9);
+    const soldFromBatch = Math.min(expiry.qty, Math.max(0, capacity - sold));
+    sold += soldFromBatch;
+    return { ...expiry, riskQty: expiry.qty - soldFromBatch };
+  });
+}
+
+export function riskWithin(expiries, days) {
+  const estimated = expiries.filter(expiry => expiry.riskQty !== null);
+  if (!estimated.length) return null;
+  return estimated.reduce((total, expiry) => total + (expiry.days <= days ? expiry.riskQty : 0), 0);
+}
+
 export function summarize(product, today = jakartaDay()) {
   const quantitiesByDay = new Map();
   let undatedStock = 0;
   let stock = 0;
   for (const [days, qty] of batchesFromRecord(product, today)) {
-    if (qty <= 0 || (days !== null && (!Number.isFinite(days) || days < 0))) continue;
-    stock += qty;
+    if (!Number.isFinite(qty) || qty <= 0 || (days !== null && !Number.isFinite(days))) continue;
+    if (days === null || days >= 0) stock += qty;
     if (days === null) undatedStock += qty;
     else quantitiesByDay.set(days, (quantitiesByDay.get(days) ?? 0) + qty);
   }
-  const dated = [...quantitiesByDay].sort((a, b) => a[0] - b[0]);
-  const daysLeft = dated[0]?.[0] ?? null;
   const sales = salesMetrics(product);
-  const incomplete = sales === null;
-  let risk = null;
-  if (!incomplete && daysLeft !== null) {
-    let cumulative = 0;
-    let biggestShortfall = 0;
-    for (const [days, qty] of dated) {
-      cumulative += qty;
-      biggestShortfall = Math.max(biggestShortfall, cumulative - sales.weekly * days / 7);
-    }
-    risk = Math.ceil(biggestShortfall);
-  }
+  const expiries = estimateExpiryRisk([...quantitiesByDay].map(([days, qty]) => ({
+    days, qty, date: new Date(today + days * dayMs),
+  })), sales?.daily);
+  const daysLeft = expiries.find(expiry => expiry.days >= 0)?.days ?? null;
+  const expiredStock = expiries.reduce((total, expiry) => total + (expiry.days < 0 ? expiry.qty : 0), 0);
   return {
-    ...product, stock, daysLeft, incomplete, risk, undatedStock,
+    ...product, stock, daysLeft, incomplete: sales === null, risk: riskWithin(expiries, Infinity), undatedStock, expiredStock,
     averageMonthlySales: sales?.monthly ?? null,
     averageWeeklySales: sales?.weekly ?? null,
     averageDailySales: sales?.daily ?? null,
     stockCoverDays: sales?.daily > 0 ? stock / sales.daily : null,
-    expiries: dated.map(([days, qty]) => ({ days, qty, date: new Date(today + days * dayMs) })),
+    expiries,
   };
 }
 

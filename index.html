@@ -18,10 +18,12 @@
   </header>
   <main class="wrap">
       <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
+        <h2 class="stats-context" id="summary-context">Ringkasan channel · Online</h2>
         <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
         <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
         <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal risiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
-        <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
+        <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">—</strong><small data-i18n="urgent_expiry_detail">pcs · estimasi FEFO</small></article>
+        <article class="stat urgency-stat"><span data-i18n="expired_stock">Stok sudah expired</span><strong id="expired-count">—</strong><small id="expired-detail">pcs</small></article>
       </section>
     <section class="inventory rose-inventory" aria-labelledby="inventory-title">
       <div class="inventory-controls">
@@ -39,6 +41,7 @@
             <select id="risk-filter">
               <option value="" data-i18n="all_status">Semua status</option>
               <option value="at-risk" data-i18n="at_risk">Berisiko expired</option>
+              <option value="expired" data-i18n="expired_stock">Stok sudah expired</option>
               <option value="clear" data-i18n="no_risk_estimate">Tidak ada estimasi risiko</option>
               <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
               <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
@@ -153,6 +156,7 @@
     </section>
     <details class="method">
       <summary data-i18n="method_title">Cara estimasi risiko expired</summary>
+      <p data-i18n="batch_method">Estimasi per tanggal memakai laju penjualan rata-rata. Stok yang sudah melewati ED dipisahkan dari stok tersedia dan estimasi risiko.</p>
       <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai rata-rata penjualan 6 bulan dari Google Sheets yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
     </details>
   </main>

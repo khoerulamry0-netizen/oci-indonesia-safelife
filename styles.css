@@ -25,7 +25,8 @@ body { margin: 0; }
 .language-switch button:hover:not([aria-pressed="true"]) { background: #28515a; color: #fff; }
 h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; }
 .hero p { margin: 0; color: #bed4d8; line-height: 1.55; }
-.stats { position: relative; display: grid; gap: 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stats { position: relative; display: grid; gap: 12px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stats-context { grid-column: 1 / -1; width: fit-content; margin: 0; padding: 6px 12px; border-radius: 8px; background: #fff8fb; color: #75485b; font-size: .875rem; }
 .stat { background: #fff; border: 1px solid var(--border); border-radius: 14px; min-height: 119px; padding: 16px 20px; display: grid; align-content: start; gap: 2px; box-shadow: 0 5px 18px #102c3608; }
 .stat span { font-size: .9rem; color: var(--muted); font-weight: 650; }
 .stat strong { font-size: 2rem; letter-spacing: -.05em; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -208,7 +209,9 @@ body.rose-theme table td:first-child { box-shadow: 5px 0 8px -9px #7c284d; }
 body.rose-theme table td:first-child { background: #fff8fb; }
 body.rose-theme tbody tr:hover td:first-child,
 body.rose-theme tbody tr:hover { background: #fff1f6; }
-body.rose-theme .status.at-risk { color: #9a315d; background: #ffe2eb; }
+body.rose-theme .status.at-risk,
+body.rose-theme .status.expired { color: #9a315d; background: #ffe2eb; }
+.expiry-list .batch-risk { color: #9a315d; white-space: normal; }
 body.rose-theme .status.clear { color: #14715c; background: #e3f4ec; }
 body.rose-theme .status.missing { color: #8b5b13; background: #fff0d4; }
 body.rose-theme .status.no-date { color: #765262; background: #f4e9ee; }
@@ -242,6 +245,9 @@ body.rose-theme .sticky-table-head th { background: #f9e3eb; color: #75485b; }
 }
 
 .mobile-filter-toggle, .stock-cards { display: none; }
+@media (min-width: 671px) and (max-width: 900px) {
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 #result-count { margin: 0; padding: 0 20px 9px; font-size: .85rem; color: #765262; text-align: right; }
 .inventory-head > div:first-child { flex: 1; min-width: 0; }
 .inventory-head .search, .inventory-head .filters { flex-shrink: 0; }
