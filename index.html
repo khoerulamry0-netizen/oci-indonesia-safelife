@@ -63,11 +63,18 @@
                 <option value="qty">Qty risiko terbesar</option>
               </select>
             </label>
+            <label class="risk-picker">Pareto
+              <select id="pareto-filter">
+                <option value="">Semua status</option>
+                <option value="Pareto 80%">Pareto 80%</option>
+                <option value="Non Pareto">Non Pareto</option>
+              </select>
+            </label>
           </div>
         </div>
         <div class="priority-table-wrap" tabindex="0" role="region" aria-label="Top 10 prioritas promo">
           <table class="priority-table">
-            <thead><tr><th scope="col">Produk / SKU</th><th scope="col">ED terdekat</th><th scope="col" class="numeric">Qty risiko</th><th scope="col" class="numeric">Modal risiko</th><th scope="col" class="numeric">Sales / bulan</th><th scope="col">Rekomendasi aksi</th></tr></thead>
+            <thead><tr><th scope="col">Produk / SKU</th><th scope="col">Pareto</th><th scope="col">ED terdekat</th><th scope="col" class="numeric">Qty risiko</th><th scope="col" class="numeric">Modal risiko</th><th scope="col" class="numeric">Sales / bulan</th><th scope="col">Rekomendasi aksi</th></tr></thead>
             <tbody id="priority-rows"></tbody>
           </table>
         </div>
