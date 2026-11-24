@@ -20,7 +20,7 @@
       <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
         <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
         <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
-        <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal stok berisiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
+        <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal risiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
         <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">0</strong><small data-i18n="urgent_expiry_detail">SKU berisiko</small></article>
         <article class="stat missing-stat"><span data-i18n="incomplete_sales">Data sales belum lengkap</span><strong id="missing-count">0</strong><small data-i18n="sku_per_channel">SKU per channel</small></article>
       </section>
@@ -51,6 +51,45 @@
               <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
             </select>
           </label>
+          <label class="risk-picker"><span data-i18n="expiry_range">Rentang ED</span>
+            <select id="expiry-range-filter">
+              <option value="" data-i18n="all_expiry">Semua ED</option>
+              <option value="0-30" data-i18n="expiry_0_30">≤ 30 hari</option>
+              <option value="31-90" data-i18n="expiry_31_90">31–90 hari</option>
+              <option value="91-180" data-i18n="expiry_91_180">91–180 hari</option>
+              <option value="180-plus" data-i18n="expiry_180_plus">> 180 hari</option>
+              <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
+            </select>
+          </label>
+          <label class="risk-picker"><span data-i18n="stock_cover_filter">Stock cover</span>
+            <select id="stock-cover-filter">
+              <option value="" data-i18n="all_stock_cover">Semua cover</option>
+              <option value="0-30" data-i18n="cover_0_30">≤ 30 hari</option>
+              <option value="31-90" data-i18n="cover_31_90">31–90 hari</option>
+              <option value="91-180" data-i18n="cover_91_180">91–180 hari</option>
+              <option value="180-plus" data-i18n="cover_180_plus">> 180 hari</option>
+              <option value="unknown" data-i18n="cover_unknown">Tidak ada cover</option>
+            </select>
+          </label>
+          <label class="risk-picker"><span data-i18n="risk_value_filter">Nilai risiko</span>
+            <select id="risk-value-filter">
+              <option value="" data-i18n="all_risk_value">Semua nilai</option>
+              <option value="under-1m" data-i18n="risk_under_1m">&lt; IDR 1 juta</option>
+              <option value="1m-10m" data-i18n="risk_1m_10m">IDR 1–10 juta</option>
+              <option value="over-10m" data-i18n="risk_over_10m">> IDR 10 juta</option>
+              <option value="no-value" data-i18n="risk_no_value">Tidak ada nilai</option>
+            </select>
+          </label>
+          <label class="risk-picker"><span data-i18n="sales_velocity">Kecepatan sales</span>
+            <select id="sales-velocity-filter">
+              <option value="" data-i18n="all_sales_velocity">Semua kecepatan</option>
+              <option value="high" data-i18n="sales_high">Tinggi</option>
+              <option value="medium" data-i18n="sales_medium">Sedang</option>
+              <option value="low" data-i18n="sales_low">Rendah</option>
+              <option value="no-sales" data-i18n="sales_no_sales">Tidak ada penjualan</option>
+              <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
+            </select>
+          </label>
           <label class="risk-picker"><span data-i18n="pareto">Pareto</span>
             <select id="pareto-filter">
               <option value="" data-i18n="all_status">Semua status</option>
@@ -67,6 +106,7 @@
             </select>
           </label>
           <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
+          <button type="button" id="reset-filters" class="export-button" data-i18n="reset_filters">Reset filter</button>
           <span id="result-count" role="status"></span>
         </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">

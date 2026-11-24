@@ -11,7 +11,7 @@ const translations = {
     sku_per_channel: 'SKU per channel',
     at_risk_stock: 'Stok berisiko expired',
     pcs_fefo: 'pcs · estimasi FEFO',
-    at_risk_value: 'Modal stok berisiko expired',
+    at_risk_value: 'Modal risiko expired',
     cost_times_risk: 'product cost × qty risiko',
     urgent_expiry: 'Risiko ED ≤30 hari',
     urgent_expiry_detail: 'SKU berisiko',
@@ -35,6 +35,31 @@ const translations = {
     within_30_days: '≤ 30 hari',
     within_60_days: '≤ 60 hari',
     within_90_days: '≤ 90 hari',
+    expiry_range: 'Rentang ED',
+    expiry_0_30: '≤ 30 hari',
+    expiry_31_90: '31–90 hari',
+    expiry_91_180: '91–180 hari',
+    expiry_180_plus: '> 180 hari',
+    stock_cover_filter: 'Stock cover',
+    all_stock_cover: 'Semua cover',
+    cover_0_30: '≤ 30 hari',
+    cover_31_90: '31–90 hari',
+    cover_91_180: '91–180 hari',
+    cover_180_plus: '> 180 hari',
+    cover_unknown: 'Tidak ada cover',
+    risk_value_filter: 'Nilai risiko',
+    all_risk_value: 'Semua nilai',
+    risk_under_1m: '< IDR 1 juta',
+    risk_1m_10m: 'IDR 1–10 juta',
+    risk_over_10m: '> IDR 10 juta',
+    risk_no_value: 'Tidak ada nilai',
+    sales_velocity: 'Kecepatan sales',
+    all_sales_velocity: 'Semua kecepatan',
+    sales_high: 'Tinggi',
+    sales_medium: 'Sedang',
+    sales_low: 'Rendah',
+    sales_no_sales: 'Tidak ada penjualan',
+    reset_filters: 'Reset filter',
     sort_by: 'Urutkan',
     sort_value: 'Modal risiko terbesar',
     sort_days: 'ED terdekat',
@@ -102,7 +127,7 @@ const translations = {
     sku_per_channel: 'SKUs per channel',
     at_risk_stock: 'Stock at expiry risk',
     pcs_fefo: 'pcs · FEFO estimate',
-    at_risk_value: 'Value of stock at expiry risk',
+    at_risk_value: 'Expiry risk value',
     cost_times_risk: 'product cost × risk qty',
     urgent_expiry: 'Expiry risk ≤30 days',
     urgent_expiry_detail: 'SKUs at risk',
@@ -126,6 +151,31 @@ const translations = {
     within_30_days: '≤ 30 days',
     within_60_days: '≤ 60 days',
     within_90_days: '≤ 90 days',
+    expiry_range: 'Expiry range',
+    expiry_0_30: '≤ 30 days',
+    expiry_31_90: '31–90 days',
+    expiry_91_180: '91–180 days',
+    expiry_180_plus: '> 180 days',
+    stock_cover_filter: 'Stock cover',
+    all_stock_cover: 'All cover periods',
+    cover_0_30: '≤ 30 days',
+    cover_31_90: '31–90 days',
+    cover_91_180: '91–180 days',
+    cover_180_plus: '> 180 days',
+    cover_unknown: 'No cover data',
+    risk_value_filter: 'Risk value',
+    all_risk_value: 'All values',
+    risk_under_1m: '< IDR 1 million',
+    risk_1m_10m: 'IDR 1–10 million',
+    risk_over_10m: '> IDR 10 million',
+    risk_no_value: 'No value',
+    sales_velocity: 'Sales velocity',
+    all_sales_velocity: 'All velocities',
+    sales_high: 'High',
+    sales_medium: 'Medium',
+    sales_low: 'Low',
+    sales_no_sales: 'No sales',
+    reset_filters: 'Reset filters',
     sort_by: 'Sort by',
     sort_value: 'Highest risk value',
     sort_days: 'Nearest expiry',
@@ -222,9 +272,14 @@ const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
 const urgencyFilter = document.getElementById('urgency-filter');
+const expiryRangeFilter = document.getElementById('expiry-range-filter');
+const stockCoverFilter = document.getElementById('stock-cover-filter');
+const riskValueFilter = document.getElementById('risk-value-filter');
+const salesVelocityFilter = document.getElementById('sales-velocity-filter');
 const prioritySort = document.getElementById('priority-sort');
 const paretoFilter = document.getElementById('pareto-filter');
 const exportExcelButton = document.getElementById('export-excel');
+const resetFiltersButton = document.getElementById('reset-filters');
 const syncStatus = document.getElementById('sync-status');
 const languageButtons = {
   id: document.getElementById('language-id'),
@@ -250,6 +305,35 @@ function statusOf(record) {
 function pricedRiskValue(record) {
   return Number.isFinite(record.risk) && Number.isFinite(record.productCost)
     ? record.risk * record.productCost : null;
+}
+
+function rangeBand(value) {
+  if (!Number.isFinite(value)) return 'unknown';
+  if (value <= 30) return '0-30';
+  if (value <= 90) return '31-90';
+  if (value <= 180) return '91-180';
+  return '180-plus';
+}
+
+function expiryRangeBand(value) {
+  return value === null ? 'no-date' : rangeBand(value);
+}
+
+function riskValueBand(record) {
+  const value = pricedRiskValue(record);
+  if (!Number.isFinite(value) || value <= 0) return 'no-value';
+  if (value < 1_000_000) return 'under-1m';
+  if (value <= 10_000_000) return '1m-10m';
+  return 'over-10m';
+}
+
+function salesVelocityBand(record) {
+  const value = record.averageMonthlySales;
+  if (!Number.isFinite(value)) return 'missing';
+  if (value <= 0) return 'no-sales';
+  if (value < 100) return 'low';
+  if (value <= 1_000) return 'medium';
+  return 'high';
 }
 
 function salesFormat(value) {
@@ -311,6 +395,10 @@ function visibleRecords() {
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value)
     .filter(record => !urgencyFilter.value || (record.daysLeft !== null && record.daysLeft <= Number(urgencyFilter.value)))
+    .filter(record => !expiryRangeFilter.value || expiryRangeBand(record.daysLeft) === expiryRangeFilter.value)
+    .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
+    .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
+    .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
   return visible.sort((a, b) => {
     if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
@@ -475,10 +563,28 @@ for (const [nextLocale, button] of Object.entries(languageButtons)) {
 }
 riskFilter.addEventListener('change', draw);
 urgencyFilter.addEventListener('change', draw);
+expiryRangeFilter.addEventListener('change', draw);
+stockCoverFilter.addEventListener('change', draw);
+riskValueFilter.addEventListener('change', draw);
+salesVelocityFilter.addEventListener('change', draw);
 prioritySort.addEventListener('change', draw);
 paretoFilter.addEventListener('change', draw);
 search.addEventListener('input', draw);
 exportExcelButton.addEventListener('click', exportExcelFile);
+resetFiltersButton.addEventListener('click', () => {
+  search.value = '';
+  riskFilter.value = '';
+  urgencyFilter.value = '';
+  expiryRangeFilter.value = '';
+  stockCoverFilter.value = '';
+  riskValueFilter.value = '';
+  salesVelocityFilter.value = '';
+  prioritySort.value = 'value';
+  paretoFilter.value = '';
+  channel = 'Online';
+  for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.channel === channel));
+  draw();
+});
 applyLanguage();
 draw();
 
