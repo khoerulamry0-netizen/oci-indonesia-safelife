@@ -20,7 +20,7 @@
     <section class="stats" aria-label="Ringkasan hasil">
       <article class="stat"><span>SKU per channel</span><strong id="sku-count">0</strong></article>
       <article class="stat risk-stat"><span>Stok berisiko expired</span><strong id="risk-count">0</strong><small>pcs · estimasi FEFO</small></article>
-      <article class="stat risk-value-stat"><span>Total nilai stok berisiko expired</span><strong id="risk-value-count">—</strong><small>product cost × qty risiko</small></article>
+      <article class="stat risk-value-stat"><span>Modal stok berisiko expired</span><strong id="risk-value-count">—</strong><small>product cost × qty risiko</small></article>
       <article class="stat missing-stat"><span>Data sales belum lengkap</span><strong id="missing-count">0</strong><small>SKU per channel</small></article>
     </section>
     <section class="inventory" aria-labelledby="inventory-title">
@@ -44,6 +44,34 @@
         </label>
         <span id="result-count" role="status"></span>
       </div>
+      <section class="priority-panel" aria-labelledby="priority-title">
+        <div class="priority-head">
+          <div><h2 id="priority-title">Top 10 Prioritas Promo</h2><p>Produk dengan risiko expired dan nilai modal terbesar untuk ditindaklanjuti marketing.</p></div>
+          <div class="priority-controls">
+            <label class="risk-picker">Urgensi ED
+              <select id="urgency-filter">
+                <option value="">Semua ED</option>
+                <option value="30">≤ 30 hari</option>
+                <option value="60">≤ 60 hari</option>
+                <option value="90">≤ 90 hari</option>
+              </select>
+            </label>
+            <label class="risk-picker">Urutkan
+              <select id="priority-sort">
+                <option value="value">Modal risiko terbesar</option>
+                <option value="days">ED terdekat</option>
+                <option value="qty">Qty risiko terbesar</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="priority-table-wrap" tabindex="0" role="region" aria-label="Top 10 prioritas promo">
+          <table class="priority-table">
+            <thead><tr><th scope="col">Produk / SKU</th><th scope="col">ED terdekat</th><th scope="col" class="numeric">Qty risiko</th><th scope="col" class="numeric">Modal risiko</th><th scope="col" class="numeric">Sales / bulan</th><th scope="col">Rekomendasi aksi</th></tr></thead>
+            <tbody id="priority-rows"></tbody>
+          </table>
+        </div>
+      </section>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
           <thead><tr><th scope="col">Produk / SKU ID</th><th scope="col">Channel</th><th scope="col" class="numeric">Stok<br>tersedia</th><th scope="col" class="numeric">Nilai risiko expired<br>(Rp)</th><th scope="col" class="numeric">Rata-rata sales<br>per bulan</th><th scope="col">Expired date / qty</th><th scope="col" class="numeric">Risiko expired<br>(pcs)</th><th scope="col">Status risiko</th></tr></thead>
