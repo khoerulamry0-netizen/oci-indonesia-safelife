@@ -63,9 +63,12 @@ function draw() {
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || statusOf(record)[1] === riskFilter.value);
   const knownRisk = visible.filter(record => record.risk !== null);
+  const pricedRisk = visible.filter(record => Number.isFinite(record.risk) && Number.isFinite(record.productCost));
+  const totalRiskValue = pricedRisk.reduce((total, record) => total + record.risk * record.productCost, 0);
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
+  document.getElementById('risk-value-count').textContent = pricedRisk.length ? rupiah.format(totalRiskValue) : '\u2014';
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = number.format(visible.length) + ' hasil';
   tableRows.replaceChildren();
