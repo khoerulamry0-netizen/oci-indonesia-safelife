@@ -329,17 +329,12 @@ async function serveStatic(res, pathname) {
   }
 }
 
-createServer(async (req, res) => {
+createServer((req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
   if (url.pathname === '/healthz') return send(res, 200, 'ok');
   if (url.pathname === '/api/offline') return offlineData(res);
   if (url.pathname === '/api/online') return proxyOnline(res);
-  if (url.pathname === '/__source/app') return send(res, 200, await readFile(join(root, 'app.mjs'), 'utf8'));
-  if (url.pathname === '/__source/inventory') return send(res, 200, await readFile(join(root, 'inventory.mjs'), 'utf8'));
-  if (url.pathname === '/__source/index') return send(res, 200, await readFile(join(root, 'index.html'), 'utf8'));
-  if (url.pathname === '/__source/styles') return send(res, 200, await readFile(join(root, 'styles.css'), 'utf8'));
-  if (url.pathname === '/__source/server') return send(res, 200, await readFile(join(root, 'server.mjs'), 'utf8'));
   return serveStatic(res, url.pathname);
 }).listen(port, '0.0.0.0', () => {
   console.log('OCI Safelife listening on ' + port);
