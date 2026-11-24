@@ -14,7 +14,8 @@ body { margin: 0; }
 .hero { background: #102c36; color: #fff; padding-bottom: 76px; }
 .masthead { display: flex; justify-content: space-between; align-items: center; color: #e1f3f0; border-bottom: 1px solid #35505a; padding: 20px 0; gap: 12px; }
 .brand { display: inline-flex; align-items: center; gap: 11px; font-size: 1rem; font-weight: 750; }
-.brand-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: #58e4bc; color: #102c36; font-size: 1.3rem; }
+.brand-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: #58e4bc; padding: 5px; }
+.brand-icon svg { display: block; width: 100%; height: 100%; }
 .demo { color: #d8efea; border: 1px solid #597a7e; border-radius: 20px; padding: 5px 10px; font-size: .875rem; }
 h1 { margin: 32px 0 8px; font-size: clamp(2rem, 4.5vw, 3.25rem); line-height: 1.05; letter-spacing: -.045em; }
 .hero p { margin: 0; color: #bed4d8; line-height: 1.55; }
