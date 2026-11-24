@@ -24,7 +24,7 @@
     </section>
     <section class="inventory" aria-labelledby="inventory-title">
       <div class="inventory-head">
-        <div><h2 id="inventory-title">Daftar stok</h2><p>Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE dan rata-rata penjualan 6 bulan terakhir dari Google Sheets.</p></div>
+        <div><h2 id="inventory-title">Daftar stok</h2><p>Online memakai 13 minggu shipment terakhir yang sudah tutup dan cost dari tab Master Cost. Offline membaca tab CLUSTERING OFFLINE dan rata-rata penjualan 6 bulan terakhir dari Google Sheets.</p></div>
         <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
       </div>
       <div class="toolbar">
@@ -45,7 +45,7 @@
       </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <table>
-          <thead><tr><th scope="col">Produk / SKU ID</th><th scope="col">Channel</th><th scope="col" class="numeric">Stok<br>tersedia</th><th scope="col" class="numeric">Rata-rata sales<br>per bulan</th><th scope="col">Expired date / qty</th><th scope="col" class="numeric">Risiko expired<br>(pcs)</th><th scope="col">Status risiko</th></tr></thead>
+          <thead><tr><th scope="col">Produk / SKU ID</th><th scope="col">Channel</th><th scope="col" class="numeric">Stok<br>tersedia</th><th scope="col" class="numeric">Product cost<br>(Rp)</th><th scope="col" class="numeric">Rata-rata sales<br>per bulan</th><th scope="col">Expired date / qty</th><th scope="col" class="numeric">Risiko expired<br>(pcs)</th><th scope="col">Status risiko</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
