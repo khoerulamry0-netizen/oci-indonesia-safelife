@@ -307,6 +307,22 @@ function pricedRiskValue(record) {
     ? record.risk * record.productCost : null;
 }
 
+function compactRiskValue(value) {
+  if (!Number.isFinite(value)) return '—';
+  const compact = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const prefix = locale === 'en' ? 'IDR ' : 'Rp';
+  if (Math.abs(value) >= 1_000_000_000) {
+    return prefix + compact.format(value / 1_000_000_000) + ' ' + (locale === 'en' ? 'billion' : 'miliar');
+  }
+  if (Math.abs(value) >= 1_000_000) {
+    return prefix + compact.format(value / 1_000_000) + ' ' + (locale === 'en' ? 'million' : 'juta');
+  }
+  return rupiah.format(value);
+}
+
 function rangeBand(value) {
   if (!Number.isFinite(value)) return 'unknown';
   if (value <= 30) return '0-30';
@@ -496,7 +512,7 @@ function draw() {
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length
     ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
-  document.getElementById('risk-value-count').textContent = pricedRisk.length ? rupiah.format(totalRiskValue) : '\u2014';
+  document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '\u2014';
   document.getElementById('urgent-count').textContent = number.format(urgent.length);
   document.getElementById('missing-count').textContent = number.format(visible.filter(record => record.incomplete).length);
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
