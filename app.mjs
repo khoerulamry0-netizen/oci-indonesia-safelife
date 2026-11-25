@@ -310,6 +310,17 @@ let onlineRecords = [];
 let offlineState = 'loading';
 let onlineState = 'loading';
 let lastSyncAt = null;
+const syncTimes = { offline: null, online: null };
+
+// Use the time the server actually fetched the data from Google Sheets (cached responses
+// may be a few minutes old). The status shows the older of the two channels.
+function recordSyncTime(key, response) {
+  const header = response.headers.get('X-Data-Fetched-At');
+  const fetchedAt = header ? new Date(header) : new Date();
+  syncTimes[key] = Number.isNaN(fetchedAt.getTime()) ? new Date() : fetchedAt;
+  const known = Object.values(syncTimes).filter(Boolean);
+  lastSyncAt = known.length ? new Date(Math.min(...known.map(time => time.getTime()))) : null;
+}
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
 const tableRows = document.getElementById('rows');
@@ -856,13 +867,13 @@ async function refreshOffline() {
     const payload = await response.json();
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
     offlineRecords = portfolio(payload.records).filter(item => item.channel === 'Offline');
+    recordSyncTime('offline', response);
     offlineState = 'ready';
   } catch (error) {
     console.error(error);
     offlineRecords = [];
     offlineState = 'error';
   }
-  if (offlineState === 'ready') lastSyncAt = new Date();
   updateSyncStatus();
   mergeRecords();
 }
@@ -891,6 +902,7 @@ async function refreshOnline() {
     });
     onlineReportsExpired = onlineRecords.some(record => record.expiredStock > 0);
     updateSkuCategoryOptions();
+    recordSyncTime('online', response);
     onlineState = 'ready';
   } catch (error) {
     console.error(error);
@@ -898,7 +910,6 @@ async function refreshOnline() {
     onlineReportsExpired = false;
     onlineState = 'error';
   }
-  if (onlineState === 'ready') lastSyncAt = new Date();
   updateSyncStatus();
   mergeRecords();
 }

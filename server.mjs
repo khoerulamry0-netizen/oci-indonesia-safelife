@@ -25,9 +25,60 @@ const contentTypes = {
   '.json': 'application/json; charset=utf-8',
 };
 
-function send(res, status, body, type = 'text/plain; charset=utf-8') {
-  res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+function send(res, status, body, type = 'text/plain; charset=utf-8', headers = {}) {
+  res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', ...headers });
   res.end(body);
+}
+
+// In-memory cache for Google Sheets-backed payloads.
+// - Fresh for CACHE_TTL_MS: served without contacting Google.
+// - Concurrent requests share one in-flight fetch.
+// - If a refresh fails, the last good payload is served (up to CACHE_MAX_STALE_MS).
+const cacheTtlMs = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
+const cacheMaxStaleMs = Number(process.env.CACHE_MAX_STALE_MS || 24 * 60 * 60 * 1000);
+const dataCache = new Map();
+
+async function cachedPayload(key, loader) {
+  const entry = dataCache.get(key) ?? {};
+  dataCache.set(key, entry);
+  const now = Date.now();
+  if (entry.body && now - entry.fetchedAt < cacheTtlMs) {
+    return { body: entry.body, fetchedAt: entry.fetchedAt, status: 'HIT' };
+  }
+  if (!entry.pending) {
+    entry.pending = (async () => {
+      try {
+        const body = JSON.stringify(await loader());
+        entry.body = body;
+        entry.fetchedAt = Date.now();
+        return { body, fetchedAt: entry.fetchedAt, status: 'MISS' };
+      } finally {
+        entry.pending = null;
+      }
+    })();
+  }
+  try {
+    return await entry.pending;
+  } catch (error) {
+    if (entry.body && Date.now() - entry.fetchedAt < cacheMaxStaleMs) {
+      console.error(key + ' refresh failed, serving stale cache:', error.message);
+      return { body: entry.body, fetchedAt: entry.fetchedAt, status: 'STALE' };
+    }
+    throw error;
+  }
+}
+
+async function sendCached(res, key, loader, errorMessage) {
+  try {
+    const { body, fetchedAt, status } = await cachedPayload(key, loader);
+    send(res, 200, body, 'application/json; charset=utf-8', {
+      'X-Cache': status,
+      'X-Data-Fetched-At': new Date(fetchedAt).toISOString(),
+    });
+  } catch (error) {
+    console.error(key + ' data sync failed:', error.message);
+    send(res, 502, JSON.stringify({ error: errorMessage }), 'application/json; charset=utf-8');
+  }
 }
 
 function parseCsv(text) {
@@ -305,66 +356,64 @@ function buildOfflineRecords(clusteringRows, salesRows) {
   };
 }
 
-async function offlineData(res) {
-  try {
-    const [clusteringRows, salesRows, costRows, paretoRows] = await Promise.all([
-      fetchCsv(clusteringOfflineGid),
-      fetchCsv(monthlySalesGid),
-      fetchCsv(masterCostGid, onlineSpreadsheetId),
-      fetchCsv(offlineParetoGid),
-    ]);
-    const payload = buildOfflineRecords(clusteringRows, salesRows);
-    const costs = buildMasterCostMap(costRows);
-    const pareto = buildParetoMap(paretoRows);
-    payload.records = payload.records.map(row => ({
-      ...row,
-      productCost: costs.get(row.sku) ?? null,
-      paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
-      paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
-      paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
-    }));
-    send(res, 200, JSON.stringify(payload), 'application/json; charset=utf-8');
-  } catch (error) {
-    console.error('offline data sync failed:', error.message);
-    send(res, 502, JSON.stringify({ error: 'Offline Google Sheets synchronization failed' }), 'application/json; charset=utf-8');
-  }
+function offlineData(res) {
+  return sendCached(res, 'offline', loadOfflineData, 'Offline Google Sheets synchronization failed');
 }
 
-async function proxyOnline(res) {
-  try {
-    const [response, costRows, summaryRows, paretoRows, categoryRows] = await Promise.all([
-      fetch(upstream, { headers: { accept: 'application/json' } }),
-      fetchCsv(masterCostGid, onlineSpreadsheetId),
-      fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
-      fetchCsv(onlineParetoGid, onlineSpreadsheetId),
-      fetchSheetCsv(onlineSkuCategorySheetName, onlineSpreadsheetId),
-    ]);
-    if (!response.ok) throw new Error('Upstream returned ' + response.status);
-    const rows = JSON.parse(await response.text());
-    if (!Array.isArray(rows)) throw new Error('Online data returned invalid JSON');
-    const costs = buildMasterCostMap(costRows);
-    const averages = buildOnlineAverageMap(summaryRows);
-    const pareto = buildParetoMap(paretoRows);
-    const skuCategories = buildSkuCategoryMap(categoryRows);
-    const enriched = rows.map(row => ({
-      ...row,
-      productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
-      skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
-      averageWeeklySales: averages.has(String(row.sku ?? '').trim())
-        ? averages.get(String(row.sku ?? '').trim()) : null,
-      averageDailySales: averages.has(String(row.sku ?? '').trim())
-        ? averages.get(String(row.sku ?? '').trim()) / 7 : null,
-      averageMonthlySales: averages.has(String(row.sku ?? '').trim())
-        ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
-      paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
-      paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
-      paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
-    }));
-    send(res, 200, JSON.stringify(enriched), 'application/json; charset=utf-8');
-  } catch (error) {
-    console.error('online data proxy failed:', error.message);
-    send(res, 502, JSON.stringify({ error: 'Online data unavailable' }), 'application/json; charset=utf-8');
-  }
+function proxyOnline(res) {
+  return sendCached(res, 'online', loadOnlineData, 'Online data unavailable');
+}
+
+async function loadOfflineData() {
+  const [clusteringRows, salesRows, costRows, paretoRows] = await Promise.all([
+    fetchCsv(clusteringOfflineGid),
+    fetchCsv(monthlySalesGid),
+    fetchCsv(masterCostGid, onlineSpreadsheetId),
+    fetchCsv(offlineParetoGid),
+  ]);
+  const payload = buildOfflineRecords(clusteringRows, salesRows);
+  const costs = buildMasterCostMap(costRows);
+  const pareto = buildParetoMap(paretoRows);
+  payload.records = payload.records.map(row => ({
+    ...row,
+    productCost: costs.get(row.sku) ?? null,
+    paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
+    paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
+    paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
+  }));
+  return payload;
+}
+
+async function loadOnlineData() {
+  const [response, costRows, summaryRows, paretoRows, categoryRows] = await Promise.all([
+    fetch(upstream, { headers: { accept: 'application/json' } }),
+    fetchCsv(masterCostGid, onlineSpreadsheetId),
+    fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
+    fetchCsv(onlineParetoGid, onlineSpreadsheetId),
+    fetchSheetCsv(onlineSkuCategorySheetName, onlineSpreadsheetId),
+  ]);
+  if (!response.ok) throw new Error('Upstream returned ' + response.status);
+  const rows = JSON.parse(await response.text());
+  if (!Array.isArray(rows)) throw new Error('Online data returned invalid JSON');
+  const costs = buildMasterCostMap(costRows);
+  const averages = buildOnlineAverageMap(summaryRows);
+  const pareto = buildParetoMap(paretoRows);
+  const skuCategories = buildSkuCategoryMap(categoryRows);
+  const enriched = rows.map(row => ({
+    ...row,
+    productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
+    skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
+    averageWeeklySales: averages.has(String(row.sku ?? '').trim())
+      ? averages.get(String(row.sku ?? '').trim()) : null,
+    averageDailySales: averages.has(String(row.sku ?? '').trim())
+      ? averages.get(String(row.sku ?? '').trim()) / 7 : null,
+    averageMonthlySales: averages.has(String(row.sku ?? '').trim())
+      ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
+    paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
+    paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
+    paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
+  }));
+  return enriched;
 }
 
 async function serveStatic(res, pathname) {
