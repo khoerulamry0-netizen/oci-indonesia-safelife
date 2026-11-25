@@ -108,10 +108,30 @@ function parseExpiry(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 }
 
-function sixMonthsEndingThisMonth() {
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const currentMonth = Number(new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date())) - 1;
-  return Array.from({length: 6}, (_, index) => monthNames[(currentMonth - 5 + index + 12) % 12]);
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const salesMonthCount = 6;
+
+function hasSalesValue(value) {
+  const text = String(value ?? '').trim();
+  if (!text || text === '-' || text === '—') return false;
+  const parsed = parseNumber(text);
+  return Number.isFinite(parsed) && parsed !== 0;
+}
+
+// Pick the latest completed months (current month excluded because it is still running)
+// that actually contain sales data. Months whose column is missing or empty for every SKU
+// (not yet filled in the sheet) are skipped instead of being counted as zero sales.
+function latestFilledCompletedMonths(header, dataRows, now = new Date()) {
+  const currentMonth = Number(new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: 'Asia/Jakarta' }).format(now)) - 1;
+  const selected = [];
+  for (let offset = 1; offset < 12 && selected.length < salesMonthCount; offset += 1) {
+    const month = monthNames[(currentMonth - offset + 12) % 12];
+    const index = columnIndex(header, month);
+    if (index < 0) continue;
+    if (!dataRows.some(row => hasSalesValue(row[index]))) continue;
+    selected.unshift({ month, index });
+  }
+  return selected;
 }
 
 async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
@@ -231,11 +251,14 @@ function buildOfflineRecords(clusteringRows, salesRows) {
   const salesHeader = salesRows[salesHeaderIndex];
   const salesSku = columnIndex(salesHeader, 'SKU');
   const salesName = columnIndex(salesHeader, 'PRODUCT DESCRIPTION');
-  const months = sixMonthsEndingThisMonth();
-  const monthColumns = months.map(month => ({ month, index: columnIndex(salesHeader, month) }));
-  if (monthColumns.some(({ index }) => index < 0)) throw new Error('Monthly sales month columns not found');
+  const salesDataRows = salesRows.slice(salesHeaderIndex + 1).filter(row => String(row[salesSku] ?? '').trim());
+  const monthColumns = latestFilledCompletedMonths(salesHeader, salesDataRows);
+  const months = monthColumns.map(({ month }) => month);
+  if (monthColumns.length < salesMonthCount) {
+    console.warn('offline sales: only ' + monthColumns.length + ' filled completed month(s) found: ' + (months.join(', ') || 'none'));
+  }
   const salesBySku = new Map();
-  for (const row of salesRows.slice(salesHeaderIndex + 1)) {
+  for (const row of salesDataRows) {
     const sku = String(row[salesSku] ?? '').trim();
     if (!sku || salesBySku.has(sku)) continue;
     salesBySku.set(sku, {
@@ -258,7 +281,7 @@ function buildOfflineRecords(clusteringRows, salesRows) {
       stock: 0,
       expiries: new Map(),
       undatedStock: 0,
-      monthlySales: salesBySku.get(sku)?.monthlySales ?? [null, null, null, null, null, null],
+      monthlySales: salesBySku.get(sku)?.monthlySales ?? null,
     };
     if (!group.name) group.name = String(row[clusterName] ?? '').trim();
     group.stock += qty;
@@ -275,7 +298,7 @@ function buildOfflineRecords(clusteringRows, salesRows) {
       name: group.name || salesBySku.get(group.sku)?.name || group.sku,
       channel: group.channel,
       stock: group.stock,
-      monthlySales: group.monthlySales,
+      monthlySales: group.monthlySales ?? months.map(() => null),
       undatedStock: group.undatedStock,
       expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
     })),

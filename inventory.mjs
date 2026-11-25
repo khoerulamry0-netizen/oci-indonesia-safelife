@@ -36,7 +36,8 @@ function salesMetrics(product) {
     ? (product.monthlySales ?? []).slice(-6)
     : (product.sales ?? []).slice(-13);
   if (product.channel === 'Offline') {
-    if (recent.length !== 6 || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
+    // The server sends only completed months that are filled in the sheet (up to 6).
+    if (!recent.length || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
     const averageMonthly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
     const weekly = averageMonthly * 12 / 52;
     return { daily: weekly / 7, weekly, monthly: averageMonthly };

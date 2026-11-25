@@ -157,7 +157,7 @@
     <details class="method">
       <summary data-i18n="method_title">Cara estimasi risiko expired</summary>
       <p data-i18n="batch_method">Estimasi per tanggal memakai laju penjualan rata-rata. Stok yang sudah melewati ED dipisahkan dari stok tersedia dan estimasi risiko.</p>
-      <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai rata-rata penjualan 6 bulan dari Google Sheets yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
+      <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai rata-rata penjualan maksimal 6 bulan terakhir yang sudah selesai dan sudah terisi di Google Sheets (bulan berjalan dan bulan yang masih kosong tidak dihitung) yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
     </details>
   </main>
 </body>
