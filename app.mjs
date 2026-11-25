@@ -2,6 +2,19 @@ import { estimateExpiryRisk, filterPortfolio, jakartaDay, portfolio, riskWithin 
 
 const translations = {
   id: {
+    brand_title: 'Marketing Control',
+    method_short: 'Metodologi',
+    method_eyebrow: 'Metodologi FEFO',
+    data_sources_title: 'Sumber data',
+    batch_method_title: 'Estimasi per batch',
+    fefo_rules_title: 'Aturan perhitungan FEFO',
+    close_dialog: 'Mengerti',
+    active_sku_sub: 'SKU aktif terpantau',
+    quick_all: 'Semua',
+    quick_ed_90: 'ED ≤ 90 hari',
+    advanced_filters_title: 'Filter & Urutkan',
+    apply_filters: 'Selesai',
+    clear_all_filters: 'Hapus semua',
     summary_channel: 'Ringkasan channel',
     summary_filtered: 'Ringkasan hasil filter',
     expired_stock: 'Stok sudah expired',
@@ -18,7 +31,7 @@ const translations = {
     nearest_expiry_short: 'ED terdekat',
     risk_qty_short: 'Qty berisiko',
     risk_value_short: 'Nilai risiko',
-    stock_details: 'Detail stok',
+    stock_details: 'Detail stok & batch',
     title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Pantau stok, risiko expired, dan peluang promosi berbasis data.',
     dashboard: 'Dashboard',
@@ -36,7 +49,7 @@ const translations = {
     inventory_title: 'Daftar stok',
     inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
-    search_placeholder: 'Cari SKU atau nama produk',
+    search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
     offline_monthly: 'Offline · bulanan',
     risk_status: 'Status risiko',
@@ -99,7 +112,7 @@ const translations = {
     product_sku_id: 'Produk / SKU ID',
     channel: 'Channel',
     available_stock: 'Stok<br>tersedia',
-    risk_value_idr: 'Nilai risiko expired<br>(Rp)',
+    risk_value_idr: 'Nilai risiko<br>(Rp)',
     average_monthly_sales: 'Rata-rata sales<br>per bulan',
     average_weekly_sales: 'Rata-rata sales<br>per minggu',
     average_daily_sales: 'Rata-rata sales<br>per hari',
@@ -118,7 +131,7 @@ const translations = {
     today: 'hari ini',
     days_left: 'hari lagi',
     no_priority: 'Belum ada produk prioritas pada filter ini.',
-    result_count: '{count} hasil',
+    result_count: '{count} SKU',
     no_match: 'Tidak ada produk yang cocok dengan filter dan pencarian.',
     loading_offline: 'Memuat data Offline dari Google Sheets…',
     offline_error: 'Sinkronisasi data Offline gagal. Tidak ada data contoh yang ditampilkan.',
@@ -139,6 +152,19 @@ const translations = {
     sync_issue: 'Sinkronisasi perlu diperiksa',
   },
   en: {
+    brand_title: 'Marketing Control',
+    method_short: 'Methodology',
+    method_eyebrow: 'FEFO Methodology',
+    data_sources_title: 'Data sources',
+    batch_method_title: 'Per-batch estimation',
+    fefo_rules_title: 'FEFO calculation rules',
+    close_dialog: 'Got it',
+    active_sku_sub: 'Active monitored SKUs',
+    quick_all: 'All',
+    quick_ed_90: 'Expiry ≤ 90d',
+    advanced_filters_title: 'Filters & Sort',
+    apply_filters: 'Done',
+    clear_all_filters: 'Clear all',
     summary_channel: 'Channel summary',
     summary_filtered: 'Filtered results summary',
     expired_stock: 'Already expired stock',
@@ -155,7 +181,7 @@ const translations = {
     nearest_expiry_short: 'Nearest expiry',
     risk_qty_short: 'At-risk qty',
     risk_value_short: 'Risk value',
-    stock_details: 'Stock details',
+    stock_details: 'Stock & batch details',
     title: 'O.TWO.O COSMETIC INDONESIA MARKETING CONTROL',
     subtitle: 'Monitor inventory, expiry risk, and data-driven promotion opportunities.',
     dashboard: 'Dashboard',
@@ -173,7 +199,7 @@ const translations = {
     inventory_title: 'Inventory list',
     inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, the latest 6-month average sales, and PARETO OFFLINE. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
-    search_placeholder: 'Search SKU or product name',
+    search_placeholder: 'Search SKU or product name…',
     online: 'Online',
     offline_monthly: 'Offline · monthly',
     risk_status: 'Risk status',
@@ -236,7 +262,7 @@ const translations = {
     product_sku_id: 'Product / SKU ID',
     channel: 'Channel',
     available_stock: 'Available<br>stock',
-    risk_value_idr: 'Expiry risk value<br>(IDR)',
+    risk_value_idr: 'Risk value<br>(IDR)',
     average_monthly_sales: 'Average sales<br>per month',
     average_weekly_sales: 'Average sales<br>per week',
     average_daily_sales: 'Average sales<br>per day',
@@ -255,7 +281,7 @@ const translations = {
     today: 'today',
     days_left: 'days left',
     no_priority: 'No priority products match these filters.',
-    result_count: '{count} results',
+    result_count: '{count} SKUs',
     no_match: 'No products match the current filters and search.',
     loading_offline: 'Loading Offline data from Google Sheets…',
     offline_error: 'Offline data synchronization failed. No sample data is shown.',
@@ -289,11 +315,10 @@ function t(key) {
 }
 
 function resetFormatters() {
-  number = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID');
-  salesNumber = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', { maximumFractionDigits: 1 });
-  rupiah = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
-    style: 'currency', currency: 'IDR', currencyDisplay: 'code', maximumFractionDigits: 0,
-  });
+  const tag = locale === 'en' ? 'en-US' : 'id-ID';
+  number = new Intl.NumberFormat(tag);
+  salesNumber = new Intl.NumberFormat(tag, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  rupiah = new Intl.NumberFormat(tag, { maximumFractionDigits: 0 });
   date = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'id-ID', {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
   });
@@ -304,6 +329,12 @@ function resetFormatters() {
 
 resetFormatters();
 
+function formatRupiah(value) {
+  if (!Number.isFinite(value)) return '—';
+  const prefix = locale === 'en' ? 'IDR ' : 'Rp ';
+  return prefix + rupiah.format(value);
+}
+
 let records = [];
 let offlineRecords = [];
 let onlineRecords = [];
@@ -312,8 +343,6 @@ let onlineState = 'loading';
 let lastSyncAt = null;
 const syncTimes = { offline: null, online: null };
 
-// Use the time the server actually fetched the data from Google Sheets (cached responses
-// may be a few minutes old). The status shows the older of the two channels.
 function recordSyncTime(key, response) {
   const header = response.headers.get('X-Data-Fetched-At');
   const fetchedAt = header ? new Date(header) : new Date();
@@ -321,12 +350,16 @@ function recordSyncTime(key, response) {
   const known = Object.values(syncTimes).filter(Boolean);
   lastSyncAt = known.length ? new Date(Math.min(...known.map(time => time.getTime()))) : null;
 }
+
 const search = document.getElementById('search');
 const filterButtons = [...document.querySelectorAll('#filters button')];
+const quickButtons = [...document.querySelectorAll('#quick-filters button')];
 const tableRows = document.getElementById('rows');
 const tableWrap = document.querySelector('.table-wrap');
 const tableScroll = document.querySelector('.table-scroll');
 const stickyTableHead = document.getElementById('sticky-table-head');
+const inventoryControls = document.querySelector('.inventory-controls');
+const riskFilter = document.getElementById('risk-filter');
 const urgencyFilter = document.getElementById('urgency-filter');
 const expiryRangeFilter = document.getElementById('expiry-range-filter');
 const stockCoverFilter = document.getElementById('stock-cover-filter');
@@ -335,14 +368,49 @@ const skuCategoryFilter = document.getElementById('sku-category-filter');
 const riskValueFilter = document.getElementById('risk-value-filter');
 const salesVelocityFilter = document.getElementById('sales-velocity-filter');
 const prioritySort = document.getElementById('priority-sort');
+const mobilePrioritySort = document.getElementById('mobile-priority-sort');
 const paretoFilter = document.getElementById('pareto-filter');
 const exportExcelButton = document.getElementById('export-excel');
+const mobileExportExcelButton = document.getElementById('mobile-export-excel');
 const resetFiltersButton = document.getElementById('reset-filters');
 const syncStatus = document.getElementById('sync-status');
+const activeChips = document.getElementById('active-chips');
+const filterBackdrop = document.getElementById('filter-backdrop');
+const filterCloseButton = document.getElementById('filter-close');
+const filterApplyButton = document.getElementById('filter-apply');
+const methodDialog = document.getElementById('method-dialog');
+const methodOpenButtons = [
+  document.getElementById('method-open'),
+  document.getElementById('method-open-footer'),
+].filter(Boolean);
+const methodCloseButtons = [
+  document.getElementById('method-close'),
+  document.getElementById('method-done'),
+].filter(Boolean);
+
 const languageButtons = {
   id: document.getElementById('language-id'),
   en: document.getElementById('language-en'),
 };
+
+const statCards = {
+  risk: document.getElementById('stat-card-risk'),
+  value: document.getElementById('stat-card-value'),
+  urgent: document.getElementById('stat-card-urgent'),
+  expired: document.getElementById('stat-card-expired'),
+};
+
+const filterDescriptors = [
+  { select: riskFilter, labelKey: 'risk_status' },
+  { select: urgencyFilter, labelKey: 'expiry_urgency' },
+  { select: expiryRangeFilter, labelKey: 'expiry_range' },
+  { select: stockCoverFilter, labelKey: 'stock_cover_filter' },
+  { select: skuCategoryFilter, labelKey: 'sku_category_filter' },
+  { select: riskValueFilter, labelKey: 'risk_value_filter' },
+  { select: salesVelocityFilter, labelKey: 'sales_velocity' },
+  { select: paretoFilter, labelKey: 'pareto' },
+];
+
 let channel = 'Online';
 let onlineReportsExpired = false;
 const mobileInventory = window.matchMedia('(max-width: 670px)');
@@ -351,10 +419,14 @@ const filterToggle = document.getElementById('filter-toggle');
 const advancedFilters = document.getElementById('advanced-filters');
 const activeFilterCount = document.getElementById('active-filter-count');
 let syncStickyHeader = () => {};
+let refreshStickyHeaderClone = () => {};
 
 function setFiltersExpanded(expanded) {
   filterToggle.setAttribute('aria-expanded', String(expanded));
-  advancedFilters.classList.toggle('is-expanded', expanded);
+  advancedFilters.hidden = !expanded;
+  filterBackdrop.hidden = !(expanded && mobileInventory.matches);
+  document.body.style.overflow = expanded && mobileInventory.matches ? 'hidden' : '';
+  syncStickyHeader();
 }
 
 function setupStickyTableHeader() {
@@ -364,18 +436,30 @@ function setupStickyTableHeader() {
 
   const stickyTable = sourceTable.cloneNode(false);
   const columns = document.createElement('colgroup');
-  for (let index = 0; index < 13; index++) columns.append(document.createElement('col'));
+  for (let index = 0; index < 12; index++) columns.append(document.createElement('col'));
   stickyTable.append(columns);
-  stickyTable.append(sourceHead.cloneNode(true));
+  let clonedHead = sourceHead.cloneNode(true);
+  stickyTable.append(clonedHead);
   stickyTableHead.replaceChildren(stickyTable);
-  const controls = document.querySelector('.inventory-controls');
+
+  refreshStickyHeaderClone = () => {
+    const nextHead = sourceHead.cloneNode(true);
+    clonedHead.replaceWith(nextHead);
+    clonedHead = nextHead;
+  };
 
   const sync = () => {
+    const controlsRect = inventoryControls?.getBoundingClientRect();
+    if (inventoryControls) {
+      inventoryControls.classList.toggle('is-stuck', (controlsRect?.top ?? 1) <= 0.5);
+    }
+    tableScroll.classList.toggle('is-scrolled-x', tableScroll.scrollLeft > 2);
+
     if (mobileInventory.matches) {
       stickyTableHead.classList.remove('is-visible');
       return;
     }
-    const controlsHeight = controls?.getBoundingClientRect().height ?? 0;
+    const controlsHeight = controlsRect?.height ?? 0;
     const wrapRect = tableWrap.getBoundingClientRect();
     const sourceHeadRect = sourceHead.getBoundingClientRect();
     const sourceTableWidth = Math.max(sourceTable.getBoundingClientRect().width, sourceTable.scrollWidth);
@@ -394,20 +478,23 @@ function setupStickyTableHeader() {
     stickyTable.style.transform = 'translateX(-' + tableScroll.scrollLeft + 'px)';
     stickyTableHead.classList.toggle('is-visible', isInTable);
     if (!isInTable) return;
+
     const [top, units] = sourceHead.rows;
     const headers = [...top.cells].filter(cell => cell.colSpan === 1);
-    headers.splice(4, 0, ...units.cells);
+    headers.splice(3, 0, ...units.cells);
     headers.forEach((cell, index) => {
-      columns.children[index].style.width = cell.getBoundingClientRect().width + 'px';
+      if (columns.children[index]) {
+        columns.children[index].style.width = cell.getBoundingClientRect().width + 'px';
+      }
     });
   };
 
-  tableScroll.addEventListener('scroll', sync, {passive: true});
-  window.addEventListener('scroll', sync, {passive: true});
-  document.addEventListener('scroll', sync, {passive: true, capture: true});
+  tableScroll.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('scroll', sync, { passive: true });
+  document.addEventListener('scroll', sync, { passive: true, capture: true });
   window.addEventListener('resize', sync);
   const resizeObserver = new ResizeObserver(sync);
-  resizeObserver.observe(controls);
+  if (inventoryControls) resizeObserver.observe(inventoryControls);
   resizeObserver.observe(sourceTable);
   syncStickyHeader = sync;
   sync();
@@ -416,11 +503,9 @@ function setupStickyTableHeader() {
 function cell(row, value, className = '') {
   const td = row.insertCell();
   td.textContent = value;
-  td.className = className;
+  if (className) td.className = className;
   return td;
 }
-
-const riskFilter = document.getElementById('risk-filter');
 
 function statusOf(record) {
   if (record.daysLeft === null && record.expiredStock > 0) return [t('expired_stock'), 'expired'];
@@ -440,14 +525,14 @@ function compactRiskValue(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  const prefix = locale === 'en' ? 'IDR ' : 'Rp';
+  const prefix = locale === 'en' ? 'IDR ' : 'Rp ';
   if (Math.abs(value) >= 1_000_000_000) {
-    return prefix + compact.format(value / 1_000_000_000) + ' ' + (locale === 'en' ? 'billion' : 'miliar');
+    return prefix + compact.format(value / 1_000_000_000) + (locale === 'en' ? 'B' : ' miliar');
   }
   if (Math.abs(value) >= 1_000_000) {
-    return prefix + compact.format(value / 1_000_000) + ' ' + (locale === 'en' ? 'million' : 'juta');
+    return prefix + compact.format(value / 1_000_000) + (locale === 'en' ? 'M' : ' juta');
   }
-  return rupiah.format(value);
+  return formatRupiah(value);
 }
 
 function rangeBand(value) {
@@ -480,11 +565,15 @@ function salesVelocityBand(record) {
 }
 
 function salesFormat(value) {
-  return Number.isFinite(value) ? salesNumber.format(value) : '—';
+  if (!Number.isFinite(value)) return '—';
+  if (value === 0) return '0';
+  return salesNumber.format(value);
 }
 
 function stockCoverFormat(value) {
-  return Number.isFinite(value) && value >= 0 ? salesNumber.format(value) : '—';
+  if (!Number.isFinite(value) || value < 0) return '—';
+  if (value === 0) return '0';
+  return salesNumber.format(value);
 }
 
 function stockCoverWeeksFormat(value) {
@@ -535,13 +624,14 @@ function applyLanguage() {
     element.setAttribute('aria-label', t(element.dataset.i18nAria));
   }
   search.placeholder = t('search_placeholder');
-  document.querySelector('.filters').setAttribute('aria-label', t('channel'));
+  document.querySelector('.channel-tabs').setAttribute('aria-label', t('channel'));
   document.querySelector('.table-wrap').setAttribute('aria-label', t('inventory_title'));
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
   updateSkuCategoryOptions();
   updateSkuCategoryVisibility();
   updateSyncStatus();
+  refreshStickyHeaderClone();
 }
 
 function updateSkuCategoryOptions() {
@@ -606,7 +696,21 @@ function escapeHtml(value) {
 
 function exportExcelFile() {
   const visible = visibleRecords();
-  const columns = [t('product_sku'), 'SKU', t('channel'), t('available_stock').replace('<br>', ' '), t('risk_value_idr').replace('<br>', ' '), t('average_monthly_sales').replace('<br>', ' '), t('average_daily_sales').replace('<br>', ' '), t('average_weekly_sales').replace('<br>', ' '), t('stock_cover').replace('<br>', ' '), t('stock_cover_weeks').replace('<br>', ' '), t('stock_cover_months').replace('<br>', ' '), t('expiry_date_qty'), t('expired_risk_pcs').replace('<br>', ' '), t('risk_status_header'), t('pareto')];
+  const columns = [
+    t('product_sku'), 'SKU', t('channel'),
+    t('available_stock').replace('<br>', ' '),
+    t('risk_value_idr').replace('<br>', ' '),
+    t('average_monthly_sales').replace('<br>', ' '),
+    t('average_daily_sales').replace('<br>', ' '),
+    t('average_weekly_sales').replace('<br>', ' '),
+    t('stock_cover').replace('<br>', ' '),
+    t('stock_cover_weeks').replace('<br>', ' '),
+    t('stock_cover_months').replace('<br>', ' '),
+    t('expiry_date_qty'),
+    t('expired_risk_pcs').replace('<br>', ' '),
+    t('risk_status_header'),
+    t('pareto'),
+  ];
   const rows = visible.map(record => {
     const riskValue = pricedRiskValue(record);
     const [riskLabel] = statusOf(record);
@@ -615,7 +719,7 @@ function exportExcelFile() {
       record.sku,
       channelLabel(record.channel),
       number.format(record.stock),
-      Number.isFinite(riskValue) ? rupiah.format(riskValue) : '—',
+      Number.isFinite(riskValue) ? formatRupiah(riskValue) : '—',
       salesFormat(record.averageMonthlySales),
       salesFormat(record.averageDailySales),
       salesFormat(record.averageWeeklySales),
@@ -650,18 +754,25 @@ function expiryRiskLabel(expiry) {
   return number.format(expiry.riskQty) + ' pcs ' + t('batch_risk');
 }
 
-function appendExpiry(list, label, qty, days, riskLabel) {
+function expiryRiskTone(expiry) {
+  if (expiry.days < 0) return 'is-risk';
+  if (expiry.riskQty === null) return 'is-neutral';
+  return expiry.riskQty > 0 ? 'is-risk' : 'is-safe';
+}
+
+function appendExpiry(list, label, qty, days, riskLabel, riskTone = 'is-neutral') {
   const entry = document.createElement('li');
   const dateLabel = document.createElement('strong');
   dateLabel.textContent = label;
   const detail = document.createElement('span');
+  detail.className = 'batch-detail';
   detail.textContent = days === null
     ? number.format(qty) + ' pcs'
-    : number.format(qty) + ' pcs \u00b7 ' + (days === 0 ? t('today') : number.format(days) + ' ' + t('days_left'));
+    : number.format(qty) + ' pcs · ' + (days === 0 ? t('today') : number.format(days) + ' ' + t('days_left'));
   entry.append(dateLabel, detail);
   if (riskLabel) {
     const risk = document.createElement('span');
-    risk.className = 'batch-risk';
+    risk.className = 'batch-risk ' + riskTone;
     risk.textContent = riskLabel;
     entry.append(risk);
   }
@@ -669,22 +780,52 @@ function appendExpiry(list, label, qty, days, riskLabel) {
 }
 
 function expiryCell(row, record) {
-  const td = cell(row, '\u2014');
+  const td = cell(row, '—');
   if (!record.expiries.length && !record.undatedStock) return;
   const list = document.createElement('ul');
   list.className = 'expiry-list';
   for (const expiry of record.expiries) {
-    appendExpiry(list, date.format(expiry.date), expiry.qty, expiry.days < 0 ? null : expiry.days, expiryRiskLabel(expiry));
+    appendExpiry(
+      list,
+      date.format(expiry.date),
+      expiry.qty,
+      expiry.days < 0 ? null : expiry.days,
+      expiryRiskLabel(expiry),
+      expiryRiskTone(expiry),
+    );
   }
   if (record.undatedStock) appendExpiry(list, t('without_expiry'), record.undatedStock, null);
   td.replaceChildren(list);
 }
 
-function appendCardField(list, key, value) {
+function buildProductMeta(record) {
+  const meta = document.createElement('div');
+  meta.className = 'product-meta';
+  const sku = document.createElement('span');
+  sku.className = 'sku-code';
+  sku.textContent = record.sku;
+  meta.append(sku);
+  if (record.paretoStatus === 'Pareto 80%') {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-pareto';
+    tag.textContent = t('pareto_80');
+    meta.append(tag);
+  }
+  if (channel === 'Online' && record.skuCategory) {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-category';
+    tag.textContent = record.skuCategory;
+    meta.append(tag);
+  }
+  return meta;
+}
+
+function appendCardField(list, key, value, valueClass = '') {
   const field = document.createElement('div');
   const label = document.createElement('dt');
   const detail = document.createElement('dd');
   label.textContent = t(key).replaceAll('<br>', ' ');
+  if (valueClass) detail.className = valueClass;
   detail.append(value);
   field.append(label, detail);
   list.append(field);
@@ -693,57 +834,145 @@ function appendCardField(list, key, value) {
 function appendStockCard(row, record) {
   const card = document.createElement('li');
   card.className = 'stock-card';
-  const [product, channelCell, stock, value, day, week, month, coverDays, coverWeeks, coverMonths, batches, qty, status] = row.cells;
-  const heading = document.createElement('h3');
-  heading.append(...product.childNodes);
+  const [product, stock, value, day, week, month, coverDays, coverWeeks, coverMonths, batches, qty, status] = row.cells;
+
+  const top = document.createElement('div');
+  top.className = 'stock-card-top';
+  const title = document.createElement('h3');
+  title.className = 'stock-card-title';
+  title.append(...product.childNodes);
+  top.append(title, ...status.childNodes);
+
   const overview = document.createElement('dl');
+  overview.className = 'stock-card-metrics';
   const firstExpiry = record.expiries.find(expiry => expiry.days >= 0);
+  const riskValue = pricedRiskValue(record);
+  appendCardField(overview, 'risk_value_short', value.textContent, riskValue > 0 ? 'is-value-risk' : '');
+  appendCardField(overview, 'risk_qty_short', qty.textContent === '—' ? '—' : qty.textContent + ' pcs', record.risk > 0 ? 'is-qty-risk' : '');
   appendCardField(overview, 'nearest_expiry_short', firstExpiry ? date.format(firstExpiry.date) : '—');
-  appendCardField(overview, 'risk_qty_short', qty.textContent === '—' ? '—' : qty.textContent + ' pcs');
-  appendCardField(overview, 'risk_value_short', value.textContent);
+  appendCardField(overview, 'available_stock', stock.textContent + ' pcs');
+
   const details = document.createElement('details');
   const summary = document.createElement('summary');
   summary.textContent = t('stock_details');
   const breakdown = document.createElement('dl');
-  for (const [key, cell] of [
-    ['channel', channelCell], ['available_stock', stock],
+  breakdown.className = 'stock-card-breakdown';
+  for (const [key, cellEl] of [
     ['average_daily_sales', day], ['average_weekly_sales', week], ['average_monthly_sales', month],
     ['stock_cover', coverDays], ['stock_cover_weeks', coverWeeks], ['stock_cover_months', coverMonths],
     ['expiry_date_qty', batches],
-  ]) appendCardField(breakdown, key, cell.firstElementChild ?? cell.textContent);
+  ]) appendCardField(breakdown, key, cellEl.firstElementChild ?? cellEl.textContent);
+
   details.append(summary, breakdown);
-  card.append(heading, ...status.childNodes, overview, details);
+  card.append(top, overview, details);
   stockCards.append(card);
+}
+
+function setCardTone(card, available, numericValue) {
+  if (!card) return;
+  card.classList.remove('is-alert', 'is-zero', 'is-muted');
+  if (!available || !Number.isFinite(numericValue)) {
+    card.classList.add('is-muted');
+  } else if (numericValue > 0) {
+    card.classList.add('is-alert');
+  } else {
+    card.classList.add('is-zero');
+  }
+}
+
+function syncQuickFilterPills() {
+  const activeQuick = (() => {
+    const anyExtra = Boolean(expiryRangeFilter.value || stockCoverFilter.value || skuCategoryFilter.value
+      || riskValueFilter.value || salesVelocityFilter.value);
+    if (anyExtra) return null;
+    if (!riskFilter.value && !urgencyFilter.value && !paretoFilter.value) return 'all';
+    if (riskFilter.value === 'at-risk' && !urgencyFilter.value && !paretoFilter.value) return 'at-risk';
+    if (!riskFilter.value && urgencyFilter.value === '90' && !paretoFilter.value) return 'urgent90';
+    if (!riskFilter.value && !urgencyFilter.value && paretoFilter.value === 'Pareto 80%') return 'pareto';
+    return null;
+  })();
+  for (const btn of quickButtons) {
+    btn.setAttribute('aria-pressed', String(btn.dataset.quick === activeQuick));
+  }
+}
+
+function renderActiveChips() {
+  const active = filterDescriptors.filter(({ select }) => !select.disabled && Boolean(select.value));
+  activeChips.replaceChildren();
+  activeChips.hidden = active.length === 0;
+
+  filterToggle.classList.toggle('has-active', active.length > 0);
+  activeFilterCount.hidden = active.length === 0;
+  activeFilterCount.textContent = number.format(active.length);
+
+  if (!active.length) return;
+  for (const { select, labelKey } of active) {
+    const selectedOption = select.options[select.selectedIndex];
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip';
+    chip.textContent = t(labelKey) + ': ' + (selectedOption?.textContent ?? select.value);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', t(labelKey));
+    remove.addEventListener('click', () => {
+      select.value = '';
+      draw();
+    });
+    chip.append(remove);
+    activeChips.append(chip);
+  }
+  const clearBtn = document.createElement('button');
+  clearBtn.type = 'button';
+  clearBtn.className = 'chip-clear-all';
+  clearBtn.textContent = t('clear_all_filters');
+  clearBtn.addEventListener('click', resetFilterSelections);
+  activeChips.append(clearBtn);
+}
+
+function resetFilterSelections() {
+  search.value = '';
+  for (const { select } of filterDescriptors) select.value = '';
+  prioritySort.value = 'value';
+  if (mobilePrioritySort) mobilePrioritySort.value = 'value';
+  draw();
 }
 
 function draw() {
   document.getElementById('source-label').textContent = channel === 'Online'
     ? t('online_source')
     : t('offline_source');
+
   const visible = visibleRecords();
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
+  const totalRiskQty = knownRisk.reduce((total, record) => total + record.risk, 0);
   const totalRiskValue = pricedRisk.reduce((total, record) => total + pricedRiskValue(record), 0);
   const urgentQty = knownRisk.reduce((total, record) => total + riskWithin(record.expiries, 30), 0);
   const expiredQty = visible.reduce((total, record) => total + (record.expiredStock ?? 0), 0);
   const expiredAvailable = channel === 'Offline' ? offlineState === 'ready' : onlineReportsExpired;
+
+  document.getElementById('sku-count').textContent = number.format(visible.length);
+  document.getElementById('risk-count').textContent = knownRisk.length ? number.format(totalRiskQty) : '—';
+  document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '—';
+  document.getElementById('urgent-count').textContent = knownRisk.length ? number.format(urgentQty) : '—';
   document.getElementById('expired-count').textContent = expiredAvailable ? number.format(expiredQty) : '—';
   document.getElementById('expired-detail').textContent = channel === 'Online' && !expiredAvailable
     ? t('expired_source_unknown') : 'pcs';
-  document.getElementById('sku-count').textContent = number.format(visible.length);
-  document.getElementById('risk-count').textContent = knownRisk.length
-    ? number.format(knownRisk.reduce((total, record) => total + record.risk, 0)) : '\u2014';
-  document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '\u2014';
-  document.getElementById('urgent-count').textContent = knownRisk.length ? number.format(urgentQty) : '—';
+
+  setCardTone(statCards.risk, knownRisk.length > 0, totalRiskQty);
+  setCardTone(statCards.value, pricedRisk.length > 0, totalRiskValue);
+  setCardTone(statCards.urgent, knownRisk.length > 0, urgentQty);
+  setCardTone(statCards.expired, expiredAvailable, expiredQty);
+
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
-  const filterCount = [...advancedFilters.querySelectorAll('select')].filter(select =>
-    select.value && select.value !== select.options[0].value
-  ).length;
-  activeFilterCount.hidden = filterCount === 0;
-  activeFilterCount.textContent = ' (' + number.format(filterCount) + ')';
-  const dataFiltered = [...advancedFilters.querySelectorAll('select:not(#priority-sort)')].some(select => select.value);
+  syncQuickFilterPills();
+  renderActiveChips();
+
+  const dataFiltered = filterDescriptors.some(({ select }) => !select.disabled && Boolean(select.value));
   document.getElementById('summary-context').textContent =
     t(dataFiltered || search.value.trim() ? 'summary_filtered' : 'summary_channel') + ' · ' + channelLabel(channel);
+
   tableRows.replaceChildren();
   stockCards.replaceChildren();
 
@@ -760,36 +989,47 @@ function draw() {
       stockCards.append(message);
     } else {
       const message = cell(tableRows.insertRow(), label, 'empty');
-      message.colSpan = 13;
+      message.colSpan = 12;
     }
   }
 
   for (const record of visible) {
     const row = mobileInventory.matches ? document.createElement('tr') : tableRows.insertRow();
     const riskValue = pricedRiskValue(record);
+
     const product = cell(row, '', 'product');
     const title = document.createElement('strong');
     title.textContent = record.name;
-    const sku = document.createElement('small');
-    sku.textContent = record.sku;
-    product.append(title, sku);
-    cell(row, channelLabel(record.channel));
-    cell(row, number.format(record.stock), 'numeric');
-    cell(row, Number.isFinite(riskValue)
-      ? rupiah.format(riskValue) : '\u2014', 'numeric');
-    cell(row, salesFormat(record.averageDailySales), 'numeric');
-    cell(row, salesFormat(record.averageWeeklySales), 'numeric');
-    cell(row, salesFormat(record.averageMonthlySales), 'numeric');
-    cell(row, stockCoverFormat(record.stockCoverDays), 'numeric');
-    cell(row, stockCoverWeeksFormat(record.stockCoverDays), 'numeric');
-    cell(row, stockCoverMonthsFormat(record.stockCoverDays), 'numeric');
+    product.append(title, buildProductMeta(record));
+
+    cell(row, number.format(record.stock), 'numeric col-stock-cell');
+    cell(
+      row,
+      Number.isFinite(riskValue) ? formatRupiah(riskValue) : '—',
+      'numeric col-risk-val-cell' + (riskValue > 0 ? ' has-risk' : ''),
+    );
+
+    cell(row, salesFormat(record.averageDailySales), 'numeric sales-cell group-start');
+    cell(row, salesFormat(record.averageWeeklySales), 'numeric sales-cell');
+    cell(row, salesFormat(record.averageMonthlySales), 'numeric sales-cell');
+
+    cell(row, stockCoverFormat(record.stockCoverDays), 'numeric cover-cell group-start');
+    cell(row, stockCoverWeeksFormat(record.stockCoverDays), 'numeric cover-cell');
+    cell(row, stockCoverMonthsFormat(record.stockCoverDays), 'numeric cover-cell group-end');
+
     expiryCell(row, record);
-    cell(row, record.risk === null ? '\u2014' : number.format(record.risk), record.risk > 0 ? 'numeric risk-value' : 'numeric');
+    cell(
+      row,
+      record.risk === null ? '—' : number.format(record.risk),
+      record.risk > 0 ? 'numeric risk-qty-alert' : 'numeric',
+    );
+
     const [label, statusClass] = statusOf(record);
     const badge = document.createElement('span');
     badge.className = 'status ' + statusClass;
     badge.textContent = label;
     cell(row, '').append(badge);
+
     if (mobileInventory.matches) appendStockCard(row, record);
   }
   syncStickyHeader();
@@ -810,6 +1050,17 @@ for (const button of filterButtons) {
   });
 }
 
+for (const button of quickButtons) {
+  button.addEventListener('click', () => {
+    const mode = button.dataset.quick;
+    for (const { select } of filterDescriptors) select.value = '';
+    if (mode === 'at-risk') riskFilter.value = 'at-risk';
+    if (mode === 'urgent90') urgencyFilter.value = '90';
+    if (mode === 'pareto') paretoFilter.value = 'Pareto 80%';
+    draw();
+  });
+}
+
 for (const [nextLocale, button] of Object.entries(languageButtons)) {
   button.addEventListener('click', () => {
     locale = nextLocale;
@@ -819,50 +1070,73 @@ for (const [nextLocale, button] of Object.entries(languageButtons)) {
     draw();
   });
 }
-riskFilter.addEventListener('change', draw);
-mobileInventory.addEventListener('change', draw);
+
 filterToggle.addEventListener('click', () => {
   setFiltersExpanded(filterToggle.getAttribute('aria-expanded') !== 'true');
 });
-document.querySelector('.inventory-controls').addEventListener('keydown', event => {
-  if (event.key !== 'Escape' || !mobileInventory.matches || filterToggle.getAttribute('aria-expanded') !== 'true') return;
+
+filterCloseButton?.addEventListener('click', () => setFiltersExpanded(false));
+filterApplyButton?.addEventListener('click', () => setFiltersExpanded(false));
+filterBackdrop?.addEventListener('click', () => setFiltersExpanded(false));
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || filterToggle.getAttribute('aria-expanded') !== 'true') return;
   event.preventDefault();
   setFiltersExpanded(false);
   filterToggle.focus();
 });
-urgencyFilter.addEventListener('change', draw);
-expiryRangeFilter.addEventListener('change', draw);
-stockCoverFilter.addEventListener('change', draw);
-skuCategoryFilter.addEventListener('change', draw);
-riskValueFilter.addEventListener('change', draw);
-salesVelocityFilter.addEventListener('change', draw);
-prioritySort.addEventListener('change', draw);
-paretoFilter.addEventListener('change', draw);
-search.addEventListener('input', draw);
-exportExcelButton.addEventListener('click', exportExcelFile);
-resetFiltersButton.addEventListener('click', () => {
-  search.value = '';
-  riskFilter.value = '';
-  urgencyFilter.value = '';
-  expiryRangeFilter.value = '';
-  stockCoverFilter.value = '';
-  skuCategoryFilter.value = '';
-  riskValueFilter.value = '';
-  salesVelocityFilter.value = '';
-  prioritySort.value = 'value';
-  paretoFilter.value = '';
-  channel = 'Online';
-  for (const button of filterButtons) button.setAttribute('aria-pressed', String(button.dataset.channel === channel));
-  updateSkuCategoryVisibility();
+
+for (const button of methodOpenButtons) {
+  button.addEventListener('click', () => {
+    if (typeof methodDialog?.showModal === 'function') methodDialog.showModal();
+  });
+}
+
+for (const button of methodCloseButtons) {
+  button.addEventListener('click', () => methodDialog?.close());
+}
+
+methodDialog?.addEventListener('click', event => {
+  if (event.target === methodDialog) methodDialog.close();
+});
+
+for (const { select } of filterDescriptors) {
+  select.addEventListener('change', draw);
+}
+
+prioritySort.addEventListener('change', () => {
+  if (mobilePrioritySort) mobilePrioritySort.value = prioritySort.value;
   draw();
 });
-applyLanguage();
+
+mobilePrioritySort?.addEventListener('change', () => {
+  prioritySort.value = mobilePrioritySort.value;
+  draw();
+});
+
+mobileInventory.addEventListener('change', () => {
+  if (!mobileInventory.matches) {
+    filterBackdrop.hidden = true;
+    document.body.style.overflow = '';
+  }
+  draw();
+});
+
+search.addEventListener('input', draw);
+exportExcelButton.addEventListener('click', exportExcelFile);
+mobileExportExcelButton?.addEventListener('click', () => {
+  exportExcelFile();
+  setFiltersExpanded(false);
+});
+resetFiltersButton.addEventListener('click', resetFilterSelections);
+
 setupStickyTableHeader();
+applyLanguage();
 draw();
 
 async function refreshOffline() {
   try {
-    const response = await fetch('/api/offline', {cache:'no-store'});
+    const response = await fetch('/api/offline', { cache: 'no-store' });
     if (!response.ok) throw new Error('Offline sheet unavailable');
     const payload = await response.json();
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
@@ -880,14 +1154,14 @@ async function refreshOffline() {
 
 async function refreshOnline() {
   try {
-    const response = await fetch('/api/online', {cache:'no-store'});
+    const response = await fetch('/api/online', { cache: 'no-store' });
     if (!response.ok) throw new Error('Feed unavailable');
     const rows = await response.json();
     const today = jakartaDay();
     onlineRecords = rows.map(row => {
       const expiries = estimateExpiryRisk(row.expiries.map(expiry => {
-        const date = new Date(expiry.date + 'T00:00:00Z');
-        return { ...expiry, date, days: Math.round((date.getTime() - today) / 86_400_000) };
+        const parsedDate = new Date(expiry.date + 'T00:00:00Z');
+        return { ...expiry, date: parsedDate, days: Math.round((parsedDate.getTime() - today) / 86_400_000) };
       }), row.incomplete ? null : row.averageDailySales);
       const daysLeft = expiries.find(expiry => expiry.days >= 0)?.days ?? null;
       const expiredStock = expiries.reduce((total, expiry) => total + (expiry.days < 0 ? expiry.qty : 0), 0);

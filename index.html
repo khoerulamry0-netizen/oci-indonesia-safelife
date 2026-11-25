@@ -3,150 +3,277 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="O.TWO.O COSMETIC INDONESIA MARKETING CONTROL untuk pemantauan stok, risiko expired, dan prioritas promosi.">
-  <title>O.TWO.O COSMETIC INDONESIA MARKETING CONTROL</title>
+  <meta name="description" content="O.TWO.O Cosmetic Indonesia Marketing Control untuk pemantauan stok, risiko expired, dan prioritas promosi.">
+  <title>O.TWO.O Cosmetic Indonesia · Marketing Control</title>
+  <link rel="icon" type="image/png" href="oto-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.mjs"></script>
 </head>
-<body class="rose-theme">
-  <header class="hero">
-    <div class="wrap">
-      <div class="masthead"><span class="brand"><img class="brand-logo" src="oto-logo.png" alt="O.TWO.O"></span><span class="demo" id="source-label">Google Sheets · Online</span><span class="sync-status" id="sync-status" aria-live="polite">Sinkronisasi data…</span><span class="language-switch" role="group" aria-label="Language"><button type="button" id="language-id" aria-pressed="true">ID</button><button type="button" id="language-en" aria-pressed="false">EN</button></span></div>
-      <h1 id="page-title" data-i18n="title">O.TWO.O COSMETIC INDONESIA MARKETING CONTROL</h1>
-      <p id="page-subtitle" data-i18n="subtitle">Pantau stok, risiko expired, dan peluang promosi berbasis data.</p>
+<body class="exec-theme">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div class="topbar-brand">
+        <span class="brand-mark">
+          <img class="brand-logo" src="oto-logo.png" alt="O.TWO.O">
+        </span>
+        <span class="topbar-divider" aria-hidden="true"></span>
+        <div class="brand-copy">
+          <span class="brand-eyebrow">O.TWO.O Cosmetic Indonesia</span>
+          <h1 id="page-title" data-i18n="brand_title">Marketing Control</h1>
+        </div>
+      </div>
+
+      <div class="topbar-meta">
+        <span class="source-pill" id="source-label">Google Sheets · Online</span>
+        <span class="sync-pill" id="sync-status" aria-live="polite">Sinkronisasi data…</span>
+        <button type="button" id="method-open" class="icon-pill" aria-haspopup="dialog" aria-controls="method-dialog" aria-label="Metodologi" data-i18n-aria="method_short">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          <span data-i18n="method_short">Metodologi</span>
+        </button>
+        <div class="language-switch" role="group" aria-label="Language">
+          <button type="button" id="language-id" aria-pressed="true">ID</button>
+          <button type="button" id="language-en" aria-pressed="false">EN</button>
+        </div>
+      </div>
     </div>
   </header>
-  <main class="wrap">
-      <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
-        <h2 class="stats-context" id="summary-context">Ringkasan channel · Online</h2>
-        <article class="stat"><span data-i18n="sku_per_channel">SKU per channel</span><strong id="sku-count">0</strong></article>
-        <article class="stat risk-stat"><span data-i18n="at_risk_stock">Stok berisiko expired</span><strong id="risk-count">0</strong><small data-i18n="pcs_fefo">pcs · estimasi FEFO</small></article>
-        <article class="stat risk-value-stat"><span data-i18n="at_risk_value">Modal risiko expired</span><strong id="risk-value-count">—</strong><small data-i18n="cost_times_risk">product cost × qty risiko</small></article>
-        <article class="stat urgency-stat"><span data-i18n="urgent_expiry">Risiko ED ≤30 hari</span><strong id="urgent-count">—</strong><small data-i18n="urgent_expiry_detail">pcs · estimasi FEFO</small></article>
-        <article class="stat urgency-stat"><span data-i18n="expired_stock">Stok sudah expired</span><strong id="expired-count">—</strong><small id="expired-detail">pcs</small></article>
-      </section>
-    <section class="inventory rose-inventory" aria-labelledby="inventory-title">
-      <div class="inventory-controls">
-        <div class="inventory-head">
-          <div><h2 id="inventory-title" data-i18n="inventory_title">Daftar stok</h2><p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p></div>
-          <label class="search"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span><input id="search" type="search" placeholder="Cari SKU atau nama produk"></label>
-          <div id="filters" class="filters" role="group" aria-label="Filter channel">
-            <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
-            <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
-          </div>
-          <button type="button" id="filter-toggle" class="export-button mobile-filter-toggle" aria-controls="advanced-filters" aria-expanded="false"><span data-i18n="filter_button">Filter</span><span id="active-filter-count" hidden></span></button>
+
+  <main class="wrap workspace">
+    <section class="workspace-bar" aria-label="Kontrol channel">
+      <div class="workspace-bar-left">
+        <div id="filters" class="channel-tabs" role="group" aria-label="Filter channel">
+          <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
+          <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
         </div>
-        <div class="toolbar" id="advanced-filters">
-          <label class="risk-picker"><span data-i18n="risk_status">Status risiko</span>
-            <select id="risk-filter">
-              <option value="" data-i18n="all_status">Semua status</option>
-              <option value="at-risk" data-i18n="at_risk">Berisiko expired</option>
-              <option value="expired" data-i18n="expired_stock">Stok sudah expired</option>
-              <option value="clear" data-i18n="no_risk_estimate">Tidak ada estimasi risiko</option>
-              <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
-              <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="expiry_urgency">Urgensi ED</span>
-            <select id="urgency-filter">
-              <option value="" data-i18n="all_expiry">Semua ED</option>
-              <option value="30" data-i18n="within_30_days">≤ 30 hari</option>
-              <option value="60" data-i18n="within_60_days">≤ 60 hari</option>
-              <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="expiry_range">Rentang ED</span>
-            <select id="expiry-range-filter">
-              <option value="" data-i18n="all_expiry">Semua ED</option>
-              <option value="0-30" data-i18n="expiry_0_30">≤ 30 hari</option>
-              <option value="31-90" data-i18n="expiry_31_90">31–90 hari</option>
-              <option value="91-180" data-i18n="expiry_91_180">91–180 hari</option>
-              <option value="180-plus" data-i18n="expiry_180_plus">> 180 hari</option>
-              <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="stock_cover_filter">Stock cover</span>
-            <select id="stock-cover-filter">
-              <option value="" data-i18n="all_stock_cover">Semua cover</option>
-              <option value="0-30" data-i18n="cover_0_30">≤ 30 hari</option>
-              <option value="31-90" data-i18n="cover_31_90">31–90 hari</option>
-              <option value="91-180" data-i18n="cover_91_180">91–180 hari</option>
-              <option value="180-plus" data-i18n="cover_180_plus">> 180 hari</option>
-              <option value="unknown" data-i18n="cover_unknown">Tidak ada cover</option>
-            </select>
-          </label>
-          <label id="sku-category-picker" class="risk-picker"><span data-i18n="sku_category_filter">Kategori SKU</span>
-            <select id="sku-category-filter">
-              <option value="" data-i18n="all_sku_categories">Semua kategori</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="risk_value_filter">Nilai risiko</span>
-            <select id="risk-value-filter">
-              <option value="" data-i18n="all_risk_value">Semua nilai</option>
-              <option value="under-1m" data-i18n="risk_under_1m">&lt; IDR 1 juta</option>
-              <option value="1m-10m" data-i18n="risk_1m_10m">IDR 1–10 juta</option>
-              <option value="over-10m" data-i18n="risk_over_10m">> IDR 10 juta</option>
-              <option value="no-value" data-i18n="risk_no_value">Tidak ada nilai</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="sales_velocity">Kecepatan sales</span>
-            <select id="sales-velocity-filter">
-              <option value="" data-i18n="all_sales_velocity">Semua kecepatan</option>
-              <option value="high" data-i18n="sales_high">Tinggi</option>
-              <option value="medium" data-i18n="sales_medium">Sedang</option>
-              <option value="low" data-i18n="sales_low">Rendah</option>
-              <option value="no-sales" data-i18n="sales_no_sales">Tidak ada penjualan</option>
-              <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="pareto">Pareto</span>
-            <select id="pareto-filter">
-              <option value="" data-i18n="all_status">Semua status</option>
-              <option value="Pareto 80%" data-i18n="pareto_80">Pareto 80%</option>
-              <option value="Non Pareto" data-i18n="non_pareto">Non Pareto</option>
-              <option value="Tidak ada penjualan" data-i18n="no_sales">Tidak ada penjualan</option>
-            </select>
-          </label>
-          <label class="risk-picker"><span data-i18n="sort_by">Urutkan</span>
-            <select id="priority-sort">
-              <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
-              <option value="days" data-i18n="sort_days">ED terdekat</option>
-              <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
-            </select>
-          </label>
-          <button type="button" id="export-excel" class="export-button" data-i18n="export_excel">Export Excel</button>
-          <button type="button" id="reset-filters" class="export-button" data-i18n="reset_filters">Reset filter</button>
+        <div class="workspace-heading">
+          <h2 class="stats-context" id="summary-context">Ringkasan channel · Online</h2>
+          <p class="workspace-subtitle" id="page-subtitle" data-i18n="subtitle">Pantau stok, risiko expired, dan peluang promosi berbasis data.</p>
         </div>
-        <p id="result-count" role="status"></p>
       </div>
+      <div class="workspace-bar-right">
+        <button type="button" id="export-excel" class="btn btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span data-i18n="export_excel">Export Excel</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Ringkasan hasil" data-i18n-aria="summary">
+      <article class="stat stat-neutral">
+        <span class="stat-label" data-i18n="sku_per_channel">SKU per channel</span>
+        <strong class="stat-value" id="sku-count">0</strong>
+        <small class="stat-sub" data-i18n="active_sku_sub">SKU aktif terpantau</small>
+      </article>
+      <article class="stat stat-risk" id="stat-card-risk">
+        <span class="stat-label" data-i18n="at_risk_stock">Stok berisiko expired</span>
+        <strong class="stat-value" id="risk-count">0</strong>
+        <small class="stat-sub" data-i18n="pcs_fefo">pcs · estimasi FEFO</small>
+      </article>
+      <article class="stat stat-value-highlight" id="stat-card-value">
+        <span class="stat-label" data-i18n="at_risk_value">Modal risiko expired</span>
+        <strong class="stat-value" id="risk-value-count">—</strong>
+        <small class="stat-sub" data-i18n="cost_times_risk">product cost × qty risiko</small>
+      </article>
+      <article class="stat stat-urgent" id="stat-card-urgent">
+        <span class="stat-label" data-i18n="urgent_expiry">Risiko ED ≤30 hari</span>
+        <strong class="stat-value" id="urgent-count">—</strong>
+        <small class="stat-sub" data-i18n="urgent_expiry_detail">pcs · estimasi FEFO</small>
+      </article>
+      <article class="stat stat-expired" id="stat-card-expired">
+        <span class="stat-label" data-i18n="expired_stock">Stok sudah expired</span>
+        <strong class="stat-value" id="expired-count">—</strong>
+        <small class="stat-sub" id="expired-detail">pcs</small>
+      </article>
+    </section>
+
+    <section class="inventory" aria-labelledby="inventory-title">
+      <h2 id="inventory-title" class="sr-only" data-i18n="inventory_title">Daftar stok</h2>
+
+      <div class="inventory-controls">
+        <div class="control-bar">
+          <label class="search">
+            <svg class="search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span>
+            <input id="search" type="search" placeholder="Cari SKU atau nama produk">
+          </label>
+
+          <div class="quick-filters" id="quick-filters" role="group" aria-label="Filter cepat">
+            <button type="button" class="quick-pill" data-quick="all" aria-pressed="true" data-i18n="quick_all">Semua</button>
+            <button type="button" class="quick-pill" data-quick="at-risk" aria-pressed="false" data-i18n="at_risk">Berisiko expired</button>
+            <button type="button" class="quick-pill" data-quick="urgent90" aria-pressed="false" data-i18n="quick_ed_90">ED ≤ 90 hari</button>
+            <button type="button" class="quick-pill" data-quick="pareto" aria-pressed="false" data-i18n="pareto_80">Pareto 80%</button>
+          </div>
+
+          <div class="control-bar-end">
+            <label class="inline-sort">
+              <span class="inline-sort-label" data-i18n="sort_by">Urutkan</span>
+              <select id="priority-sort">
+                <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
+                <option value="days" data-i18n="sort_days">ED terdekat</option>
+                <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
+              </select>
+            </label>
+
+            <button type="button" id="filter-toggle" class="btn btn-filter" aria-controls="advanced-filters" aria-expanded="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span data-i18n="filter_button">Filter</span>
+              <span id="active-filter-count" class="filter-badge" hidden></span>
+            </button>
+
+            <span id="result-count" class="result-pill" role="status"></span>
+          </div>
+        </div>
+
+        <div id="active-chips" class="active-chips" hidden></div>
+
+        <div id="filter-backdrop" class="filter-backdrop" hidden></div>
+
+        <div class="filter-panel" id="advanced-filters" hidden>
+          <div class="filter-panel-header">
+            <strong data-i18n="advanced_filters_title">Filter lanjutan</strong>
+            <button type="button" id="filter-close" class="icon-close" aria-label="Tutup filter">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="filter-grid">
+            <label class="filter-field">
+              <span data-i18n="risk_status">Status risiko</span>
+              <select id="risk-filter">
+                <option value="" data-i18n="all_status">Semua status</option>
+                <option value="at-risk" data-i18n="at_risk">Berisiko expired</option>
+                <option value="expired" data-i18n="expired_stock">Stok sudah expired</option>
+                <option value="clear" data-i18n="no_risk_estimate">Tidak ada estimasi risiko</option>
+                <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
+                <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="expiry_urgency">Urgensi ED</span>
+              <select id="urgency-filter">
+                <option value="" data-i18n="all_expiry">Semua ED</option>
+                <option value="30" data-i18n="within_30_days">≤ 30 hari</option>
+                <option value="60" data-i18n="within_60_days">≤ 60 hari</option>
+                <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="expiry_range">Rentang ED</span>
+              <select id="expiry-range-filter">
+                <option value="" data-i18n="all_expiry">Semua ED</option>
+                <option value="0-30" data-i18n="expiry_0_30">≤ 30 hari</option>
+                <option value="31-90" data-i18n="expiry_31_90">31–90 hari</option>
+                <option value="91-180" data-i18n="expiry_91_180">91–180 hari</option>
+                <option value="180-plus" data-i18n="expiry_180_plus">&gt; 180 hari</option>
+                <option value="no-date" data-i18n="no_expiry_date">Tidak ada ED</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="stock_cover_filter">Stock cover</span>
+              <select id="stock-cover-filter">
+                <option value="" data-i18n="all_stock_cover">Semua cover</option>
+                <option value="0-30" data-i18n="cover_0_30">≤ 30 hari</option>
+                <option value="31-90" data-i18n="cover_31_90">31–90 hari</option>
+                <option value="91-180" data-i18n="cover_91_180">91–180 hari</option>
+                <option value="180-plus" data-i18n="cover_180_plus">&gt; 180 hari</option>
+                <option value="unknown" data-i18n="cover_unknown">Tidak ada cover</option>
+              </select>
+            </label>
+
+            <label id="sku-category-picker" class="filter-field">
+              <span data-i18n="sku_category_filter">Kategori SKU</span>
+              <select id="sku-category-filter">
+                <option value="" data-i18n="all_sku_categories">Semua kategori</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="risk_value_filter">Nilai risiko</span>
+              <select id="risk-value-filter">
+                <option value="" data-i18n="all_risk_value">Semua nilai</option>
+                <option value="under-1m" data-i18n="risk_under_1m">&lt; IDR 1 juta</option>
+                <option value="1m-10m" data-i18n="risk_1m_10m">IDR 1–10 juta</option>
+                <option value="over-10m" data-i18n="risk_over_10m">&gt; IDR 10 juta</option>
+                <option value="no-value" data-i18n="risk_no_value">Tidak ada nilai</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="sales_velocity">Kecepatan sales</span>
+              <select id="sales-velocity-filter">
+                <option value="" data-i18n="all_sales_velocity">Semua kecepatan</option>
+                <option value="high" data-i18n="sales_high">Tinggi</option>
+                <option value="medium" data-i18n="sales_medium">Sedang</option>
+                <option value="low" data-i18n="sales_low">Rendah</option>
+                <option value="no-sales" data-i18n="sales_no_sales">Tidak ada penjualan</option>
+                <option value="missing" data-i18n="incomplete_sales">Data sales belum lengkap</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span data-i18n="pareto">Pareto</span>
+              <select id="pareto-filter">
+                <option value="" data-i18n="all_status">Semua status</option>
+                <option value="Pareto 80%" data-i18n="pareto_80">Pareto 80%</option>
+                <option value="Non Pareto" data-i18n="non_pareto">Non Pareto</option>
+                <option value="Tidak ada penjualan" data-i18n="no_sales">Tidak ada penjualan</option>
+              </select>
+            </label>
+
+            <label class="filter-field mobile-only-sort">
+              <span data-i18n="sort_by">Urutkan</span>
+              <select id="mobile-priority-sort">
+                <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
+                <option value="days" data-i18n="sort_days">ED terdekat</option>
+                <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="filter-panel-footer">
+            <button type="button" id="reset-filters" class="btn btn-ghost" data-i18n="reset_filters">Reset filter</button>
+            <div class="filter-panel-actions">
+              <button type="button" id="mobile-export-excel" class="btn btn-secondary mobile-only-export" data-i18n="export_excel">Export Excel</button>
+              <button type="button" id="filter-apply" class="btn btn-primary" data-i18n="apply_filters">Selesai</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <ul id="stock-cards" class="stock-cards" aria-labelledby="inventory-title"></ul>
+
       <div class="table-wrap" tabindex="0" role="region" aria-label="Tabel stok dan risiko expired">
         <div id="sticky-table-head" class="sticky-table-head" aria-hidden="true"></div>
         <div class="table-scroll">
           <table>
-            <colgroup span="4"></colgroup>
             <colgroup span="3"></colgroup>
-            <colgroup span="3"></colgroup>
+            <colgroup span="3" class="col-group-sales"></colgroup>
+            <colgroup span="3" class="col-group-cover"></colgroup>
             <colgroup span="3"></colgroup>
             <thead>
               <tr>
-                <th scope="col" rowspan="2" data-i18n="product_sku_id">Produk / SKU ID</th>
-                <th scope="col" rowspan="2" data-i18n="channel">Channel</th>
-                <th scope="col" rowspan="2" class="numeric" data-i18n="available_stock">Stok<br>tersedia</th>
-                <th scope="col" rowspan="2" class="numeric" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th>
-                <th scope="colgroup" colspan="3" data-i18n="average_sales">Rata-rata sales</th>
-                <th scope="colgroup" colspan="3">Stock cover</th>
-                <th scope="col" rowspan="2" data-i18n="expiry_date_qty">Expired date / qty</th>
-                <th scope="col" rowspan="2" class="numeric" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th>
-                <th scope="col" rowspan="2" data-i18n="risk_status">Status risiko</th>
+                <th scope="col" rowspan="2" class="col-product" data-i18n="product_sku_id">Produk / SKU ID</th>
+                <th scope="col" rowspan="2" class="numeric col-stock" data-i18n="available_stock">Stok<br>tersedia</th>
+                <th scope="col" rowspan="2" class="numeric col-risk-val" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th>
+                <th scope="colgroup" colspan="3" class="group-header group-sales" data-i18n="average_sales">Rata-rata sales</th>
+                <th scope="colgroup" colspan="3" class="group-header group-cover">Stock cover</th>
+                <th scope="col" rowspan="2" class="col-expiry" data-i18n="expiry_date_qty">Expired date / qty</th>
+                <th scope="col" rowspan="2" class="numeric col-risk-qty" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th>
+                <th scope="col" rowspan="2" class="col-status" data-i18n="risk_status">Status risiko</th>
               </tr>
               <tr>
-                <th scope="col" class="numeric" data-i18n="day_unit">Hari</th>
-                <th scope="col" class="numeric" data-i18n="week_unit">Minggu</th>
-                <th scope="col" class="numeric" data-i18n="month_unit">Bulan</th>
-                <th scope="col" class="numeric" data-i18n="day_unit">Hari</th>
-                <th scope="col" class="numeric" data-i18n="week_unit">Minggu</th>
-                <th scope="col" class="numeric" data-i18n="month_unit">Bulan</th>
+                <th scope="col" class="numeric sub-sales group-start" data-i18n="day_unit">Hari</th>
+                <th scope="col" class="numeric sub-sales" data-i18n="week_unit">Minggu</th>
+                <th scope="col" class="numeric sub-sales" data-i18n="month_unit">Bulan</th>
+                <th scope="col" class="numeric sub-cover group-start" data-i18n="day_unit">Hari</th>
+                <th scope="col" class="numeric sub-cover" data-i18n="week_unit">Minggu</th>
+                <th scope="col" class="numeric sub-cover group-end" data-i18n="month_unit">Bulan</th>
               </tr>
             </thead>
             <tbody id="rows"></tbody>
@@ -154,11 +281,42 @@
         </div>
       </div>
     </section>
-    <details class="method">
-      <summary data-i18n="method_title">Cara estimasi risiko expired</summary>
-      <p data-i18n="batch_method">Estimasi per tanggal memakai laju penjualan rata-rata. Stok yang sudah melewati ED dipisahkan dari stok tersedia dan estimasi risiko.</p>
-      <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai rata-rata penjualan maksimal 6 bulan terakhir yang sudah selesai dan sudah terisi di Google Sheets (bulan berjalan dan bulan yang masih kosong tidak dihitung) yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
-    </details>
+
+    <footer class="page-footer">
+      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p>
+      <button type="button" id="method-open-footer" class="footer-link" data-i18n="method_title">Cara estimasi risiko expired</button>
+    </footer>
   </main>
+
+  <dialog id="method-dialog" class="method-dialog" aria-labelledby="method-dialog-title">
+    <div class="dialog-card">
+      <div class="dialog-head">
+        <div>
+          <span class="dialog-eyebrow" data-i18n="method_eyebrow">Metodologi FEFO</span>
+          <h2 id="method-dialog-title" data-i18n="method_title">Cara estimasi risiko expired</h2>
+        </div>
+        <button type="button" id="method-close" class="icon-close" aria-label="Tutup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <div class="method-block">
+          <h3 data-i18n="data_sources_title">Sumber data</h3>
+          <p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p>
+        </div>
+        <div class="method-block">
+          <h3 data-i18n="batch_method_title">Estimasi per batch</h3>
+          <p data-i18n="batch_method">Estimasi per tanggal memakai laju penjualan rata-rata. Stok yang sudah melewati ED dipisahkan dari stok tersedia dan estimasi risiko.</p>
+        </div>
+        <div class="method-block">
+          <h3 data-i18n="fefo_rules_title">Aturan perhitungan FEFO</h3>
+          <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai rata-rata penjualan maksimal 6 bulan terakhir yang sudah selesai dan sudah terisi di Google Sheets (bulan berjalan dan bulan yang masih kosong tidak dihitung) yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" id="method-done" class="btn btn-primary" data-i18n="close_dialog">Mengerti</button>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>
