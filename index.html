@@ -45,6 +45,7 @@
     <section class="workspace-bar" aria-label="Kontrol channel">
       <div class="workspace-bar-left">
         <div id="filters" class="channel-tabs" role="group" aria-label="Filter channel">
+          <button type="button" data-channel="all" data-i18n="all_channels" aria-pressed="false">Semua channel</button>
           <button type="button" data-channel="Online" data-i18n="online" aria-pressed="true">Online</button>
           <button type="button" data-channel="Offline" data-i18n="offline_monthly" aria-pressed="false">Offline · bulanan</button>
         </div>
@@ -77,15 +78,15 @@
         <strong class="stat-value" id="risk-value-count">—</strong>
         <small class="stat-sub" data-i18n="cost_times_risk">product cost × qty risiko</small>
       </article>
-      <article class="stat stat-urgent" id="stat-card-urgent">
-        <span class="stat-label" data-i18n="urgent_expiry">Risiko ED ≤30 hari</span>
-        <strong class="stat-value" id="urgent-count">—</strong>
-        <small class="stat-sub" data-i18n="urgent_expiry_detail">pcs · estimasi FEFO</small>
+      <article class="stat stat-neutral" id="stat-card-stock-value">
+        <span class="stat-label" data-i18n="total_stock_value">Total nilai stok</span>
+        <strong class="stat-value" id="stock-value-count">—</strong>
+        <small class="stat-sub" data-i18n="cost_times_stock">product cost × stok tersedia</small>
       </article>
-      <article class="stat stat-expired" id="stat-card-expired">
-        <span class="stat-label" data-i18n="expired_stock">Stok sudah expired</span>
-        <strong class="stat-value" id="expired-count">—</strong>
-        <small class="stat-sub" id="expired-detail">pcs</small>
+      <article class="stat stat-risk-ratio" id="stat-card-risk-ratio">
+        <span class="stat-label" data-i18n="risk_ratio">Persentase risiko</span>
+        <strong class="stat-value" id="risk-ratio-count">—</strong>
+        <small class="stat-sub" data-i18n="risk_over_stock">nilai risiko ÷ nilai stok</small>
       </article>
     </section>
 

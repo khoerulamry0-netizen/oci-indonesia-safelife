@@ -9,6 +9,12 @@ const translations = {
     batch_method_title: 'Estimasi per batch',
     fefo_rules_title: 'Aturan perhitungan FEFO',
     close_dialog: 'Mengerti',
+    all_channels: 'Semua channel',
+    all_channels_source: 'Google Sheets · Online + Offline',
+    total_stock_value: 'Total nilai stok',
+    cost_times_stock: 'product cost × stok tersedia',
+    risk_value_ratio: 'Rasio risiko modal',
+    risk_ratio_detail: 'nilai risiko ÷ nilai stok',
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
     quick_ed_90: 'ED ≤ 90 hari',
@@ -42,6 +48,14 @@ const translations = {
     sku_per_channel: 'SKU per channel',
     at_risk_stock: 'Stok berisiko expired',
     pcs_fefo: 'pcs · estimasi FEFO',
+    all_channels: 'Semua channel',
+    all_sources: 'Google Sheets · Online + Offline',
+    loading_all: 'Memuat data Online & Offline dari Google Sheets…',
+    all_error: 'Sinkronisasi data Online & Offline gagal.',
+    total_stock_value: 'Total nilai stok',
+    cost_times_stock: 'product cost × stok tersedia',
+    risk_ratio: 'Persentase risiko',
+    risk_over_stock: 'nilai risiko ÷ total nilai stok',
     at_risk_value: 'Modal risiko expired',
     cost_times_risk: 'product cost × qty risiko',
     urgent_expiry: 'Risiko ED ≤30 hari',
@@ -167,6 +181,12 @@ const translations = {
     batch_method_title: 'Per-batch estimation',
     fefo_rules_title: 'FEFO calculation rules',
     close_dialog: 'Got it',
+    all_channels: 'All channels',
+    all_channels_source: 'Google Sheets · Online + Offline',
+    total_stock_value: 'Total stock value',
+    cost_times_stock: 'product cost × available stock',
+    risk_value_ratio: 'Risk-to-stock ratio',
+    risk_ratio_detail: 'risk value ÷ stock value',
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
     quick_ed_90: 'Expiry ≤ 90d',
@@ -200,6 +220,14 @@ const translations = {
     sku_per_channel: 'SKUs per channel',
     at_risk_stock: 'Stock at expiry risk',
     pcs_fefo: 'pcs · FEFO estimate',
+    all_channels: 'All channels',
+    all_sources: 'Google Sheets · Online + Offline',
+    loading_all: 'Loading Online & Offline data from Google Sheets…',
+    all_error: 'Online & Offline data synchronization failed.',
+    total_stock_value: 'Total stock value',
+    cost_times_stock: 'product cost × available stock',
+    risk_ratio: 'Risk percentage',
+    risk_over_stock: 'risk value ÷ total stock value',
     at_risk_value: 'Expiry risk value',
     cost_times_risk: 'product cost × risk qty',
     urgent_expiry: 'Expiry risk ≤30 days',
@@ -322,6 +350,7 @@ const translations = {
 let locale = localStorage.getItem('oci-locale') === 'en' ? 'en' : 'id';
 let number;
 let salesNumber;
+let percentNumber;
 let rupiah;
 let date;
 let syncDate;
@@ -334,6 +363,7 @@ function resetFormatters() {
   const tag = locale === 'en' ? 'en-US' : 'id-ID';
   number = new Intl.NumberFormat(tag);
   salesNumber = new Intl.NumberFormat(tag, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  percentNumber = new Intl.NumberFormat(tag, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   rupiah = new Intl.NumberFormat(tag, { maximumFractionDigits: 0 });
   date = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'id-ID', {
     day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
@@ -412,8 +442,8 @@ const languageButtons = {
 const statCards = {
   risk: document.getElementById('stat-card-risk'),
   value: document.getElementById('stat-card-value'),
-  urgent: document.getElementById('stat-card-urgent'),
-  expired: document.getElementById('stat-card-expired'),
+  stockValue: document.getElementById('stat-card-stock-value'),
+  riskRatio: document.getElementById('stat-card-risk-ratio'),
 };
 
 const filterDescriptors = [
@@ -535,6 +565,11 @@ function pricedRiskValue(record) {
     ? record.risk * record.productCost : null;
 }
 
+function pricedStockValue(record) {
+  return Number.isFinite(record.stock) && Number.isFinite(record.productCost)
+    ? record.stock * record.productCost : null;
+}
+
 function compactRiskValue(value) {
   if (!Number.isFinite(value)) return '—';
   const compact = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'id-ID', {
@@ -606,6 +641,7 @@ function stockCoverMonthsFormat(value) {
 }
 
 function channelLabel(value) {
+  if (value === 'all') return t('all_channels');
   return value === 'Offline' ? t('offline_monthly') : t('online');
 }
 
@@ -676,9 +712,9 @@ function updateSkuCategoryOptions() {
 }
 
 function updateSkuCategoryVisibility() {
-  const isOnline = channel === 'Online';
-  skuCategoryPicker.hidden = !isOnline;
-  skuCategoryFilter.disabled = !isOnline;
+  const showCategory = channel !== 'Offline';
+  skuCategoryPicker.hidden = !showCategory;
+  skuCategoryFilter.disabled = !showCategory;
 }
 
 function visibleRecords() {
@@ -688,7 +724,7 @@ function visibleRecords() {
     .filter(record => !urgencyFilter.value || riskWithin(record.expiries, Number(urgencyFilter.value)) > 0)
     .filter(record => matchesExpiryRange(record.daysLeft, expiryRangeFilter.value))
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
-    .filter(record => channel !== 'Online' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
+    .filter(record => channel === 'Offline' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -826,13 +862,19 @@ function buildProductMeta(record) {
   sku.className = 'sku-code';
   sku.textContent = record.sku;
   meta.append(sku);
+  if (channel === 'all') {
+    const chTag = document.createElement('span');
+    chTag.className = 'meta-tag ' + (record.channel === 'Offline' ? 'meta-tag-channel-offline' : 'meta-tag-channel-online');
+    chTag.textContent = record.channel;
+    meta.append(chTag);
+  }
   if (record.paretoStatus === 'Pareto 80%') {
     const tag = document.createElement('span');
     tag.className = 'meta-tag meta-tag-pareto';
     tag.textContent = t('pareto_80');
     meta.append(tag);
   }
-  if (channel === 'Online' && record.skuCategory) {
+  if (channel !== 'Offline' && record.skuCategory) {
     const tag = document.createElement('span');
     tag.className = 'meta-tag meta-tag-category';
     tag.textContent = record.skuCategory;
@@ -961,31 +1003,32 @@ function resetFilterSelections() {
 }
 
 function draw() {
-  document.getElementById('source-label').textContent = channel === 'Online'
-    ? t('online_source')
-    : t('offline_source');
+  document.getElementById('source-label').textContent = channel === 'all'
+    ? t('all_sources')
+    : (channel === 'Online' ? t('online_source') : t('offline_source'));
 
   const visible = visibleRecords();
   const knownRisk = visible.filter(record => record.risk !== null);
   const pricedRisk = visible.filter(record => pricedRiskValue(record) !== null);
+  const pricedStock = visible.filter(record => pricedStockValue(record) !== null);
   const totalRiskQty = knownRisk.reduce((total, record) => total + record.risk, 0);
   const totalRiskValue = pricedRisk.reduce((total, record) => total + pricedRiskValue(record), 0);
-  const urgentQty = knownRisk.reduce((total, record) => total + riskWithin(record.expiries, 30), 0);
-  const expiredQty = visible.reduce((total, record) => total + (record.expiredStock ?? 0), 0);
-  const expiredAvailable = channel === 'Offline' ? offlineState === 'ready' : onlineReportsExpired;
+  const totalStockValue = pricedStock.reduce((total, record) => total + pricedStockValue(record), 0);
+  const riskRatioPct = totalStockValue > 0 && pricedRisk.length > 0
+    ? (totalRiskValue / totalStockValue) * 100
+    : null;
 
   document.getElementById('sku-count').textContent = number.format(visible.length);
   document.getElementById('risk-count').textContent = knownRisk.length ? number.format(totalRiskQty) : '—';
   document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '—';
-  document.getElementById('urgent-count').textContent = knownRisk.length ? number.format(urgentQty) : '—';
-  document.getElementById('expired-count').textContent = expiredAvailable ? number.format(expiredQty) : '—';
-  document.getElementById('expired-detail').textContent = channel === 'Online' && !expiredAvailable
-    ? t('expired_source_unknown') : 'pcs';
+  document.getElementById('stock-value-count').textContent = pricedStock.length ? compactRiskValue(totalStockValue) : '—';
+  document.getElementById('risk-ratio-count').textContent = riskRatioPct !== null
+    ? percentNumber.format(riskRatioPct) + '%'
+    : '—';
 
   setCardTone(statCards.risk, knownRisk.length > 0, totalRiskQty);
   setCardTone(statCards.value, pricedRisk.length > 0, totalRiskValue);
-  setCardTone(statCards.urgent, knownRisk.length > 0, urgentQty);
-  setCardTone(statCards.expired, expiredAvailable, expiredQty);
+  setCardTone(statCards.riskRatio, riskRatioPct !== null, riskRatioPct);
 
   document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
   syncQuickFilterPills();
@@ -1000,6 +1043,8 @@ function draw() {
 
   if (!visible.length) {
     let label = t('no_match');
+    if (channel === 'all' && offlineState === 'loading' && onlineState === 'loading') label = t('loading_all');
+    if (channel === 'all' && offlineState === 'error' && onlineState === 'error') label = t('all_error');
     if (channel === 'Offline' && offlineState === 'loading') label = t('loading_offline');
     if (channel === 'Offline' && offlineState === 'error') label = t('offline_error');
     if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
@@ -1065,7 +1110,7 @@ function mergeRecords() {
 for (const button of filterButtons) {
   button.addEventListener('click', () => {
     channel = button.dataset.channel;
-    if (channel !== 'Online') skuCategoryFilter.value = '';
+    if (channel === 'Offline') skuCategoryFilter.value = '';
     for (const item of filterButtons) item.setAttribute('aria-pressed', String(item === button));
     updateSkuCategoryVisibility();
     draw();

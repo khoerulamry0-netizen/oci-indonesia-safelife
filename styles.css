@@ -568,8 +568,10 @@ body {
 .stat.stat-value-highlight.is-alert::before { background: var(--brand-700); }
 .stat.stat-value-highlight.is-alert .stat-value { color: var(--brand-800); }
 
-.stat.stat-urgent.is-alert::before { background: var(--danger-600); }
-.stat.stat-urgent.is-alert .stat-value { color: var(--danger-700); }
+.stat.stat-urgent.is-alert::before,
+.stat.stat-risk-ratio.is-alert::before { background: var(--danger-600); }
+.stat.stat-urgent.is-alert .stat-value,
+.stat.stat-risk-ratio.is-alert .stat-value { color: var(--danger-700); }
 
 .stat.stat-expired.is-alert::before { background: var(--danger-700); }
 .stat.stat-expired.is-alert .stat-value { color: var(--danger-700); }
@@ -1099,6 +1101,28 @@ tbody tr:hover td.cover-cell {
   border: 1px solid var(--border);
 }
 
+.meta-tag-channel-online {
+  color: var(--brand-800);
+  background: var(--brand-50);
+  border: 1px solid #f5bfd6;
+}
+
+.meta-tag-channel-offline {
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.meta-tag-online {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.meta-tag-offline {
+  color: #6d28d9;
+  background: #f3e8ff;
+}
+
 /* Expiry Batch List */
 .expiry-list {
   list-style: none;
@@ -1490,7 +1514,8 @@ tbody tr:hover td.cover-cell {
   .channel-tabs button {
     flex: 1;
     text-align: center;
-    padding: 0 8px;
+    padding: 0 6px;
+    font-size: 0.78rem;
   }
 
   .workspace-bar-right {
