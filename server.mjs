@@ -326,7 +326,9 @@ function buildOnlineAverageMap(rows) {
   for (const row of rows.slice(headerIndex + 1)) {
     const sku = skuKey(row[skuIndex]);
     if (!sku || averages.has(sku)) continue;
-    const weekly = parseNumber(row[weeklyIndex]);
+    const raw = String(row[weeklyIndex] ?? '').trim();
+    if (!raw || raw === '-' || raw === '—') continue;
+    const weekly = parseNumber(raw);
     if (Number.isFinite(weekly) && weekly >= 0) averages.set(sku, weekly);
   }
   return averages;
