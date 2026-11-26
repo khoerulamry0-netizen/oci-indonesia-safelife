@@ -238,13 +238,20 @@ function hasSalesValue(value) {
   return Number.isFinite(parsed) && parsed !== 0;
 }
 
-// Pick the latest completed months (current month excluded because it is still running)
-// that actually contain sales data. Months whose column is missing or empty for every SKU
-// (not yet filled in the sheet) are skipped instead of being counted as zero sales.
-function latestFilledCompletedMonths(header, dataRows, now = new Date()) {
+function jakartaDay(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'Asia/Jakarta',
+  }).formatToParts(now);
+  const { year, month, day } = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return Date.UTC(Number(year), Number(month) - 1, Number(day));
+}
+
+// List all completed months (current month excluded because it is still running)
+// that actually contain sales data in chronological order up to the most recent closed month.
+function filledClosedMonthColumns(header, dataRows, now = new Date()) {
   const currentMonth = Number(new Intl.DateTimeFormat('en-US', { month: 'numeric', timeZone: 'Asia/Jakarta' }).format(now)) - 1;
   const selected = [];
-  for (let offset = 1; offset < 12 && selected.length < salesMonthCount; offset += 1) {
+  for (let offset = 1; offset < 12; offset += 1) {
     const month = monthNames[(currentMonth - offset + 12) % 12];
     const index = columnIndex(header, month);
     if (index < 0) continue;
@@ -252,6 +259,10 @@ function latestFilledCompletedMonths(header, dataRows, now = new Date()) {
     selected.unshift({ month, index });
   }
   return selected;
+}
+
+function latestFilledCompletedMonths(header, dataRows, now = new Date()) {
+  return filledClosedMonthColumns(header, dataRows, now).slice(-salesMonthCount);
 }
 
 async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
@@ -402,7 +413,9 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   const salesOosFilter = columnIndex(salesHeader, 'OOS FILTER');
   const salesSwcNote = columnIndex(salesHeader, 'SWC NOTE');
   const salesDataRows = salesRows.slice(salesHeaderIndex + 1).filter(row => String(row[salesSku] ?? '').trim());
-  const monthColumns = latestFilledCompletedMonths(salesHeader, salesDataRows);
+  const closedMonthColumns = filledClosedMonthColumns(salesHeader, salesDataRows);
+  const minHistoryMonths = Math.min(3, closedMonthColumns.length);
+  const monthColumns = closedMonthColumns.slice(-salesMonthCount);
   const months = monthColumns.map(({ month }) => month);
   if (monthColumns.length < salesMonthCount) {
     console.warn('offline sales: only ' + monthColumns.length + ' filled completed month(s) found: ' + (months.join(', ') || 'none'));
@@ -420,11 +433,13 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
         if (Number.isFinite(parsedAvg) && parsedAvg >= 0) averageMonthlySales = parsedAvg;
       }
     }
+    const completedSalesMonths = closedMonthColumns.filter(({ index }) => parseIndonesianNumber(row[index]) > 0).length;
     salesBySku.set(sku, {
       sku: rawSku,
       name: String(row[salesName] ?? '').trim(),
       monthlySales: monthColumns.map(({ index }) => parseIndonesianNumber(row[index])),
       averageMonthlySales,
+      completedSalesMonths,
       oosFilter: salesOosFilter >= 0 ? String(row[salesOosFilter] ?? '').trim() || null : null,
       swcNote: salesSwcNote >= 0 ? String(row[salesSwcNote] ?? '').trim() || null : null,
     });
@@ -450,6 +465,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       undatedStock: 0,
       monthlySales: salesInfo?.monthlySales ?? null,
       averageMonthlySales: salesInfo?.averageMonthlySales ?? null,
+      completedSalesMonths: salesInfo?.completedSalesMonths ?? 0,
       oosFilter: normalized(salesInfo?.oosFilter) === 'oos' ? 'OOS' : 'STOCK AVAILABLE',
       swcNote: salesInfo?.swcNote ?? null,
     };
@@ -470,6 +486,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       stock: group.stock,
       monthlySales: group.monthlySales ?? months.map(() => null),
       averageMonthlySales: group.averageMonthlySales,
+      completedSalesMonths: group.completedSalesMonths,
       oosFilter: group.oosFilter,
       swcNote: group.swcNote,
       undatedStock: group.undatedStock,
@@ -487,6 +504,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       stock: 0,
       monthlySales: salesInfo.monthlySales ?? months.map(() => null),
       averageMonthlySales: salesInfo.averageMonthlySales,
+      completedSalesMonths: salesInfo.completedSalesMonths,
       oosFilter: 'OOS',
       swcNote: salesInfo.swcNote,
       undatedStock: 0,
@@ -496,6 +514,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   }
   return {
     salesMonths: months,
+    minHistoryMonths,
     records: [...stockedRecords, ...oosRecords],
   };
 }
@@ -516,18 +535,28 @@ async function loadOfflineData() {
     fetchCsv(offlineParetoGid),
     fetchCsv(activeSkuOfflineGid),
   ]);
-  const payload = buildOfflineRecords(clusteringRows, salesRows, activeSkuRows);
+  const { minHistoryMonths, ...payload } = buildOfflineRecords(clusteringRows, salesRows, activeSkuRows);
   const costs = buildMasterCostMap(costRows);
   const pareto = buildParetoMap(paretoRows);
+  const today = jakartaDay();
   payload.records = payload.records.map(row => {
     const key = skuKey(row.sku);
     const paretoEntry = pareto.get(key);
-    const isNewOfflineSku = row.isActive === true
-      && (row.averageMonthlySales === 0 || row.averageMonthlySales === null)
-      && !paretoEntry?.status;
+    const hasUrgentExpiry = (row.expiries ?? []).some(exp => {
+      const ms = Date.parse(exp.date + 'T00:00:00Z');
+      if (!Number.isFinite(ms)) return false;
+      const days = Math.round((ms - today) / 86_400_000);
+      return days >= 0 && days <= 180;
+    });
+    const isRampUpSku = row.isActive === true
+      && !hasUrgentExpiry
+      && (
+        row.completedSalesMonths < minHistoryMonths
+        || ((row.averageMonthlySales === 0 || row.averageMonthlySales === null) && !paretoEntry?.status)
+      );
     return {
       ...row,
-      ...(isNewOfflineSku ? {
+      ...(isRampUpSku ? {
         averageMonthlySales: null,
         monthlySales: Array.isArray(row.monthlySales) ? row.monthlySales.map(() => null) : [],
         incomplete: true,
