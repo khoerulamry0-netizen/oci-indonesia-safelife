@@ -36,7 +36,12 @@ function salesMetrics(product) {
     ? (product.monthlySales ?? []).slice(-6)
     : (product.sales ?? []).slice(-13);
   if (product.channel === 'Offline') {
-    // The server sends only completed months that are filled in the sheet (up to 6).
+    if (Number.isFinite(product.averageMonthlySales) && product.averageMonthlySales >= 0) {
+      const averageMonthly = product.averageMonthlySales;
+      const weekly = averageMonthly * 12 / 52;
+      return { daily: weekly / 7, weekly, monthly: averageMonthly };
+    }
+    // Fallback: compute from completed filled months if Monthly AVG is unavailable.
     if (!recent.length || !recent.every(value => Number.isFinite(value) && value >= 0)) return null;
     const averageMonthly = recent.reduce((sum, value) => sum + value, 0) / recent.length;
     const weekly = averageMonthly * 12 / 52;
