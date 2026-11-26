@@ -12,6 +12,7 @@ const translations = {
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
     quick_ed_90: 'ED ≤ 90 hari',
+    quick_ed_180: 'ED ≤ 180 hari',
     advanced_filters_title: 'Filter & Urutkan',
     apply_filters: 'Selesai',
     clear_all_filters: 'Hapus semua',
@@ -60,13 +61,20 @@ const translations = {
     export_excel: 'Export Excel',
     priority_title: 'Top 10 Prioritas Promo',
     priority_description: 'Produk dengan risiko expired dan nilai modal terbesar untuk ditindaklanjuti marketing.',
-    expiry_urgency: 'Urgensi ED',
+    expiry_urgency: 'Risiko ED',
+    all_expiry_risk: 'Semua risiko ED',
+    risk_within_30_days: 'Risiko ≤ 30 hari',
+    risk_within_60_days: 'Risiko ≤ 60 hari',
+    risk_within_90_days: 'Risiko ≤ 90 hari',
+    risk_within_180_days: 'Risiko ≤ 180 hari',
     all_expiry: 'Semua ED',
     within_30_days: '≤ 30 hari',
     within_60_days: '≤ 60 hari',
     within_90_days: '≤ 90 hari',
     expiry_range: 'Rentang ED',
     expiry_0_30: '≤ 30 hari',
+    expiry_0_90: '≤ 90 hari',
+    expiry_0_180: '≤ 180 hari',
     expiry_31_90: '31–90 hari',
     expiry_91_180: '91–180 hari',
     expiry_180_plus: '> 180 hari',
@@ -162,6 +170,7 @@ const translations = {
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
     quick_ed_90: 'Expiry ≤ 90d',
+    quick_ed_180: 'Expiry ≤ 180d',
     advanced_filters_title: 'Filters & Sort',
     apply_filters: 'Done',
     clear_all_filters: 'Clear all',
@@ -210,13 +219,20 @@ const translations = {
     export_excel: 'Export Excel',
     priority_title: 'Top 10 Promotion Priorities',
     priority_description: 'Products with the highest expiry risk and inventory value for marketing follow-up.',
-    expiry_urgency: 'Expiry urgency',
+    expiry_urgency: 'Expiry risk window',
+    all_expiry_risk: 'All risk windows',
+    risk_within_30_days: 'Risk ≤ 30 days',
+    risk_within_60_days: 'Risk ≤ 60 days',
+    risk_within_90_days: 'Risk ≤ 90 days',
+    risk_within_180_days: 'Risk ≤ 180 days',
     all_expiry: 'All expiry dates',
     within_30_days: '≤ 30 days',
     within_60_days: '≤ 60 days',
     within_90_days: '≤ 90 days',
     expiry_range: 'Expiry range',
     expiry_0_30: '≤ 30 days',
+    expiry_0_90: '≤ 90 days',
+    expiry_0_180: '≤ 180 days',
     expiry_31_90: '31–90 days',
     expiry_91_180: '91–180 days',
     expiry_180_plus: '> 180 days',
@@ -543,8 +559,13 @@ function rangeBand(value) {
   return '180-plus';
 }
 
-function expiryRangeBand(value) {
-  return value === null ? 'no-date' : rangeBand(value);
+function matchesExpiryRange(daysLeft, selectedRange) {
+  if (!selectedRange) return true;
+  if (selectedRange === 'no-date') return daysLeft === null;
+  if (daysLeft === null) return false;
+  if (selectedRange === '0-90') return daysLeft <= 90;
+  if (selectedRange === '0-180') return daysLeft <= 180;
+  return rangeBand(daysLeft) === selectedRange;
 }
 
 function riskValueBand(record) {
@@ -665,7 +686,7 @@ function visibleRecords() {
     .filter(record => !riskFilter.value || (riskFilter.value === 'expired'
       ? record.expiredStock > 0 : statusOf(record)[1] === riskFilter.value))
     .filter(record => !urgencyFilter.value || riskWithin(record.expiries, Number(urgencyFilter.value)) > 0)
-    .filter(record => !expiryRangeFilter.value || expiryRangeBand(record.daysLeft) === expiryRangeFilter.value)
+    .filter(record => matchesExpiryRange(record.daysLeft, expiryRangeFilter.value))
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel !== 'Online' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
@@ -882,13 +903,14 @@ function setCardTone(card, available, numericValue) {
 
 function syncQuickFilterPills() {
   const activeQuick = (() => {
-    const anyExtra = Boolean(expiryRangeFilter.value || stockCoverFilter.value || skuCategoryFilter.value
+    const anyExtra = Boolean(urgencyFilter.value || stockCoverFilter.value || skuCategoryFilter.value
       || riskValueFilter.value || salesVelocityFilter.value);
     if (anyExtra) return null;
-    if (!riskFilter.value && !urgencyFilter.value && !paretoFilter.value) return 'all';
-    if (riskFilter.value === 'at-risk' && !urgencyFilter.value && !paretoFilter.value) return 'at-risk';
-    if (!riskFilter.value && urgencyFilter.value === '90' && !paretoFilter.value) return 'urgent90';
-    if (!riskFilter.value && !urgencyFilter.value && paretoFilter.value === 'Pareto 80%') return 'pareto';
+    if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value) return 'all';
+    if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value) return 'at-risk';
+    if (!riskFilter.value && expiryRangeFilter.value === '0-90' && !paretoFilter.value) return 'ed90';
+    if (!riskFilter.value && expiryRangeFilter.value === '0-180' && !paretoFilter.value) return 'ed180';
+    if (!riskFilter.value && !expiryRangeFilter.value && paretoFilter.value === 'Pareto 80%') return 'pareto';
     return null;
   })();
   for (const btn of quickButtons) {
@@ -1055,7 +1077,8 @@ for (const button of quickButtons) {
     const mode = button.dataset.quick;
     for (const { select } of filterDescriptors) select.value = '';
     if (mode === 'at-risk') riskFilter.value = 'at-risk';
-    if (mode === 'urgent90') urgencyFilter.value = '90';
+    if (mode === 'ed90') expiryRangeFilter.value = '0-90';
+    if (mode === 'ed180') expiryRangeFilter.value = '0-180';
     if (mode === 'pareto') paretoFilter.value = 'Pareto 80%';
     draw();
   });

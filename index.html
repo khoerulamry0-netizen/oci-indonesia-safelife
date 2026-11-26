@@ -103,7 +103,8 @@
           <div class="quick-filters" id="quick-filters" role="group" aria-label="Filter cepat">
             <button type="button" class="quick-pill" data-quick="all" aria-pressed="true" data-i18n="quick_all">Semua</button>
             <button type="button" class="quick-pill" data-quick="at-risk" aria-pressed="false" data-i18n="at_risk">Berisiko expired</button>
-            <button type="button" class="quick-pill" data-quick="urgent90" aria-pressed="false" data-i18n="quick_ed_90">ED ≤ 90 hari</button>
+            <button type="button" class="quick-pill" data-quick="ed90" aria-pressed="false" data-i18n="quick_ed_90">ED ≤ 90 hari</button>
+            <button type="button" class="quick-pill" data-quick="ed180" aria-pressed="false" data-i18n="quick_ed_180">ED ≤ 180 hari</button>
             <button type="button" class="quick-pill" data-quick="pareto" aria-pressed="false" data-i18n="pareto_80">Pareto 80%</button>
           </div>
 
@@ -153,12 +154,13 @@
             </label>
 
             <label class="filter-field">
-              <span data-i18n="expiry_urgency">Urgensi ED</span>
+              <span data-i18n="expiry_urgency">Risiko ED</span>
               <select id="urgency-filter">
-                <option value="" data-i18n="all_expiry">Semua ED</option>
-                <option value="30" data-i18n="within_30_days">≤ 30 hari</option>
-                <option value="60" data-i18n="within_60_days">≤ 60 hari</option>
-                <option value="90" data-i18n="within_90_days">≤ 90 hari</option>
+                <option value="" data-i18n="all_expiry_risk">Semua risiko ED</option>
+                <option value="30" data-i18n="risk_within_30_days">Risiko ≤ 30 hari</option>
+                <option value="60" data-i18n="risk_within_60_days">Risiko ≤ 60 hari</option>
+                <option value="90" data-i18n="risk_within_90_days">Risiko ≤ 90 hari</option>
+                <option value="180" data-i18n="risk_within_180_days">Risiko ≤ 180 hari</option>
               </select>
             </label>
 
@@ -167,6 +169,8 @@
               <select id="expiry-range-filter">
                 <option value="" data-i18n="all_expiry">Semua ED</option>
                 <option value="0-30" data-i18n="expiry_0_30">≤ 30 hari</option>
+                <option value="0-90" data-i18n="expiry_0_90">≤ 90 hari</option>
+                <option value="0-180" data-i18n="expiry_0_180">≤ 180 hari</option>
                 <option value="31-90" data-i18n="expiry_31_90">31–90 hari</option>
                 <option value="91-180" data-i18n="expiry_91_180">91–180 hari</option>
                 <option value="180-plus" data-i18n="expiry_180_plus">&gt; 180 hari</option>
