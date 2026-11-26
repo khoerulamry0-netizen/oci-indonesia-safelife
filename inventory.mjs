@@ -36,6 +36,7 @@ function salesMetrics(product) {
     ? (product.monthlySales ?? []).slice(-6)
     : (product.sales ?? []).slice(-13);
   if (product.channel === 'Offline') {
+    if (product.incomplete) return null;
     if (Number.isFinite(product.averageMonthlySales) && product.averageMonthlySales >= 0) {
       const averageMonthly = product.averageMonthlySales;
       const weekly = averageMonthly * 12 / 52;
@@ -88,7 +89,7 @@ export function summarize(product, today = jakartaDay()) {
   const daysLeft = expiries.find(expiry => expiry.days >= 0)?.days ?? null;
   const expiredStock = expiries.reduce((total, expiry) => total + (expiry.days < 0 ? expiry.qty : 0), 0);
   return {
-    ...product, stock, daysLeft, incomplete: sales === null, risk: riskWithin(expiries, Infinity), undatedStock, expiredStock,
+    ...product, stock, daysLeft, incomplete: Boolean(product.incomplete) || sales === null, risk: riskWithin(expiries, Infinity), undatedStock, expiredStock,
     averageMonthlySales: sales?.monthly ?? null,
     averageWeeklySales: sales?.weekly ?? null,
     averageDailySales: sales?.daily ?? null,

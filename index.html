@@ -353,7 +353,7 @@
         </div>
         <div class="method-block">
           <h3 data-i18n="fefo_rules_title">Aturan perhitungan FEFO</h3>
-          <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai kolom Monthly AVG dari tab Stock cover offline di Google Sheets yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
+          <p data-i18n="method_description">FEFO mengasumsikan stok dengan tanggal expired paling dekat keluar dulu. Online memakai rata-rata shipment 13 minggu. Offline memakai kolom Monthly AVG dari tab Stock cover offline di Google Sheets yang dikonversi ke mingguan dengan mengalikan 12 lalu membagi 52. Angka 0 dan tanda "-" dihitung sebagai tidak ada penjualan. SKU Offline baru yang aktif dengan sales 0 dan belum tercatat di PARETO OFFLINE ditandai sebagai data sales belum lengkap agar tidak memicu risiko semu. Jika sinkronisasi atau data sales gagal, estimasi ditahan dan tidak diganti data contoh.</p>
         </div>
       </div>
       <div class="dialog-foot">

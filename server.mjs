@@ -521,12 +521,21 @@ async function loadOfflineData() {
   const pareto = buildParetoMap(paretoRows);
   payload.records = payload.records.map(row => {
     const key = skuKey(row.sku);
+    const paretoEntry = pareto.get(key);
+    const isNewOfflineSku = row.isActive === true
+      && (row.averageMonthlySales === 0 || row.averageMonthlySales === null)
+      && !paretoEntry?.status;
     return {
       ...row,
+      ...(isNewOfflineSku ? {
+        averageMonthlySales: null,
+        monthlySales: Array.isArray(row.monthlySales) ? row.monthlySales.map(() => null) : [],
+        incomplete: true,
+      } : {}),
       productCost: costs.get(key) ?? null,
-      paretoStatus: pareto.get(key)?.status ?? null,
-      paretoContribution: pareto.get(key)?.contribution ?? null,
-      paretoRank: pareto.get(key)?.rank ?? null,
+      paretoStatus: paretoEntry?.status ?? null,
+      paretoContribution: paretoEntry?.contribution ?? null,
+      paretoRank: paretoEntry?.rank ?? null,
     };
   });
   return payload;
