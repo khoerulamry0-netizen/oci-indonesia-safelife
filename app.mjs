@@ -717,7 +717,7 @@ function stockCoverWeeksFormat(value) {
 }
 
 function stockCoverMonthsFormat(value) {
-  return Number.isFinite(value) && value >= 0 ? stockCoverFormat(value / 30) : '—';
+  return Number.isFinite(value) && value >= 0 ? stockCoverFormat(value * 12 / 364) : '—';
 }
 
 function channelLabel(value) {

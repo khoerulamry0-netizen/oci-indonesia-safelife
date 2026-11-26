@@ -345,6 +345,13 @@ function buildOnlineAverageMap(rows) {
   return averages;
 }
 
+function parseOptionalNumber(value) {
+  const text = String(value ?? '').trim();
+  if (!text || text === '-' || text === '—') return null;
+  const parsed = parseIndonesianNumber(text);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function buildParetoMap(rows) {
   const headerIndex = findHeader(rows, ['SKU', 'Pareto Status']);
   if (headerIndex < 0) throw new Error('PARETO STATUS headers not found');
@@ -353,14 +360,20 @@ function buildParetoMap(rows) {
   const statusIndex = columnIndex(header, 'Pareto Status');
   const contributionIndex = columnIndex(header, 'Kontribusi Sales (%)');
   const rankIndex = columnIndex(header, 'Rank');
+  const totalSales13Index = columnIndex(header, 'Total Sales (13 minggu)');
+  const weeklyAvgIndex = columnIndex(header, 'Avg / minggu (pcs)');
   const pareto = new Map();
   for (const row of rows.slice(headerIndex + 1)) {
     const sku = skuKey(row[skuIndex]);
     if (!sku || pareto.has(sku)) continue;
+    const total13 = totalSales13Index >= 0 ? parseOptionalNumber(row[totalSales13Index]) : null;
+    const avgWeekly = weeklyAvgIndex >= 0 ? parseOptionalNumber(row[weeklyAvgIndex]) : null;
+    const exactWeekly = total13 !== null ? total13 / 13 : avgWeekly;
     pareto.set(sku, {
       status: String(row[statusIndex] ?? '').trim() || null,
       contribution: contributionIndex >= 0 ? parsePercent(row[contributionIndex]) : null,
       rank: rankIndex >= 0 ? parseNumber(row[rankIndex]) : null,
+      exactWeekly,
     });
   }
   if (!pareto.size) throw new Error('PARETO STATUS returned no usable rows');
@@ -587,7 +600,15 @@ async function loadOnlineData() {
   const skuCategories = buildSkuCategoryMap(categoryRows);
   const enriched = rows.map(row => {
     const key = skuKey(row.sku);
-    const weekly = averages.has(key) ? averages.get(key) : null;
+    const paretoEntry = pareto.get(key);
+    const summaryWeekly = averages.has(key) ? averages.get(key) : null;
+    const paretoWeekly = paretoEntry?.exactWeekly ?? null;
+    const weekly = summaryWeekly !== null
+      && Number.isFinite(paretoWeekly)
+      && paretoWeekly >= 0
+      && Math.abs(Number(paretoWeekly.toFixed(2)) - summaryWeekly) <= 0.015
+      ? paretoWeekly
+      : summaryWeekly;
     return {
       ...row,
       productCost: costs.get(key) ?? null,
@@ -595,9 +616,9 @@ async function loadOnlineData() {
       averageWeeklySales: weekly,
       averageDailySales: weekly !== null ? weekly / 7 : null,
       averageMonthlySales: weekly !== null ? weekly * 52 / 12 : null,
-      paretoStatus: pareto.get(key)?.status ?? null,
-      paretoContribution: pareto.get(key)?.contribution ?? null,
-      paretoRank: pareto.get(key)?.rank ?? null,
+      paretoStatus: paretoEntry?.status ?? null,
+      paretoContribution: paretoEntry?.contribution ?? null,
+      paretoRank: paretoEntry?.rank ?? null,
     };
   });
   return enriched;
