@@ -7,9 +7,18 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const rootPrefix = root.endsWith(sep) ? root : root + sep;
 const port = Number(process.env.PORT || 10000);
 const upstream = 'https://oci-indonesia.verdantspark1.chatgpt.site/api/online';
+const fetchTimeoutMs = Number(process.env.FETCH_TIMEOUT_MS || 15000);
+
+function fetchWithTimeout(url, opts = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), fetchTimeoutMs);
+  return fetch(url, { ...opts, signal: controller.signal })
+    .finally(() => clearTimeout(timeoutId));
+}
 const spreadsheetId = '1RpLHOzhQd58zO2NvIoubybaHiXNavWGczVOa5fzS-m0';
 const clusteringOfflineGid = '211915398';
 const monthlySalesGid = '953675285';
+const activeSkuOfflineGid = '963622879';  // Tab "active sku offline"
 const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
 const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
@@ -29,7 +38,18 @@ const contentTypes = {
 };
 
 function send(res, status, body, type = 'text/plain; charset=utf-8', headers = {}) {
-  res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', ...headers });
+  const securityHeaders = {
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:;",
+  };
+  res.writeHead(status, {
+    'Content-Type': type,
+    'Cache-Control': 'no-store',
+    ...securityHeaders,
+    ...headers,
+  });
   res.end(body);
 }
 
@@ -74,10 +94,15 @@ async function cachedPayload(key, loader) {
 async function sendCached(res, key, loader, errorMessage) {
   try {
     const { body, fetchedAt, status } = await cachedPayload(key, loader);
-    send(res, 200, body, 'application/json; charset=utf-8', {
+    const extraHeaders = {
       'X-Cache': status,
       'X-Data-Fetched-At': new Date(fetchedAt).toISOString(),
-    });
+    };
+    if (status === 'STALE') {
+      extraHeaders['X-Stale-Data'] = 'true';
+      extraHeaders['Warning'] = '199 - "Stale data served due to upstream sync failure"';
+    }
+    send(res, 200, body, 'application/json; charset=utf-8', extraHeaders);
   } catch (error) {
     console.error(key + ' data sync failed:', error.message);
     send(res, 502, JSON.stringify({ error: errorMessage }), 'application/json; charset=utf-8');
@@ -190,7 +215,7 @@ function latestFilledCompletedMonths(header, dataRows, now = new Date()) {
 
 async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
   const exportUrl = 'https://docs.google.com/spreadsheets/d/' + sourceSpreadsheetId + '/export?format=csv&gid=';
-  const response = await fetch(exportUrl + gid + '&cachebust=' + Date.now(), { cache: 'no-store' });
+  const response = await fetchWithTimeout(exportUrl + gid + '&cachebust=' + Date.now(), { cache: 'no-store' });
   if (!response.ok) throw new Error('Google Sheets returned ' + response.status);
   const text = await response.text();
   if (!text.trim() || /<html[\s>]/i.test(text)) throw new Error('Google Sheets did not return CSV data');
@@ -200,7 +225,7 @@ async function fetchCsv(gid, sourceSpreadsheetId = spreadsheetId) {
 async function fetchSheetCsv(sheetName, sourceSpreadsheetId = onlineSpreadsheetId) {
   const url = 'https://docs.google.com/spreadsheets/d/' + sourceSpreadsheetId
     + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName) + '&cachebust=' + Date.now();
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetchWithTimeout(url, { cache: 'no-store' });
   if (!response.ok) throw new Error('Google Sheets returned ' + response.status);
   const text = await response.text();
   if (!text.trim() || /<html[\s>]/i.test(text)) throw new Error('Google Sheets did not return CSV data');
@@ -287,7 +312,31 @@ function buildParetoMap(rows) {
   return pareto;
 }
 
-function buildOfflineRecords(clusteringRows, salesRows) {
+function buildActiveSkuMap(rows) {
+  let headerIndex = findHeader(rows, ['SKU', 'Active Status']);
+  let statusColumnName = 'Active Status';
+
+  if (headerIndex < 0) {
+    headerIndex = findHeader(rows, ['SKU', 'Note']);
+    statusColumnName = 'Note';
+  }
+
+  if (headerIndex < 0) throw new Error('Active SKU Offline headers not found');
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU');
+  const statusIndex = columnIndex(header, statusColumnName);
+  const activeMap = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = String(row[skuIndex] ?? '').trim().toUpperCase();
+    if (!sku || activeMap.has(sku)) continue;
+    const status = String(row[statusIndex] ?? '').trim().toLowerCase();
+    activeMap.set(sku, status === 'active' || status === 'ya' || status === '1' || status === 'true');
+  }
+  if (!activeMap.size) throw new Error('Active SKU Offline returned no usable rows');
+  return activeMap;
+}
+
+function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   const clusterHeaderIndex = findHeader(clusteringRows, ['SKU ID', 'Nama Barang', 'Kedaluwarsa']);
   if (clusterHeaderIndex < 0) throw new Error('Clustering Offline headers not found');
   const clusterHeader = clusteringRows[clusterHeaderIndex];
@@ -320,6 +369,8 @@ function buildOfflineRecords(clusteringRows, salesRows) {
       monthlySales: monthColumns.map(({ index }) => parseNumber(row[index])),
     });
   }
+
+  const activeSkuMap = buildActiveSkuMap(activeSkuRows);
 
   const grouped = new Map();
   for (const row of clusteringRows.slice(clusterHeaderIndex + 1)) {
@@ -355,6 +406,7 @@ function buildOfflineRecords(clusteringRows, salesRows) {
       monthlySales: group.monthlySales ?? months.map(() => null),
       undatedStock: group.undatedStock,
       expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
+      isActive: activeSkuMap.get(String(group.sku ?? '').trim().toUpperCase()) ?? false,
     })),
   };
 }
@@ -368,13 +420,14 @@ function proxyOnline(res) {
 }
 
 async function loadOfflineData() {
-  const [clusteringRows, salesRows, costRows, paretoRows] = await Promise.all([
+  const [clusteringRows, salesRows, costRows, paretoRows, activeSkuRows] = await Promise.all([
     fetchCsv(clusteringOfflineGid),
     fetchCsv(monthlySalesGid),
     fetchCsv(masterCostGid, onlineSpreadsheetId),
     fetchCsv(offlineParetoGid),
+    fetchCsv(activeSkuOfflineGid),
   ]);
-  const payload = buildOfflineRecords(clusteringRows, salesRows);
+  const payload = buildOfflineRecords(clusteringRows, salesRows, activeSkuRows);
   const costs = buildMasterCostMap(costRows);
   const pareto = buildParetoMap(paretoRows);
   payload.records = payload.records.map(row => ({
@@ -389,7 +442,7 @@ async function loadOfflineData() {
 
 async function loadOnlineData() {
   const [response, costRows, summaryRows, paretoRows, categoryRows] = await Promise.all([
-    fetch(upstream, { headers: { accept: 'application/json' } }),
+    fetchWithTimeout(upstream, { headers: { accept: 'application/json' } }),
     fetchCsv(masterCostGid, onlineSpreadsheetId),
     fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
     fetchCsv(onlineParetoGid, onlineSpreadsheetId),

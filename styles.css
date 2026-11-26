@@ -237,6 +237,15 @@ body {
   background: #fb7185;
 }
 
+.sync-pill.is-stale {
+  color: #fef3c7;
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.sync-pill.is-stale::before {
+  background: #fbbf24;
+}
+
 .icon-pill {
   display: inline-flex;
   align-items: center;
@@ -1111,6 +1120,12 @@ tbody tr:hover td.cover-cell {
   color: #0369a1;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
+}
+
+.meta-tag-inactive {
+  color: var(--warn-700);
+  background: var(--warn-50);
+  border: 1px solid var(--warn-border);
 }
 
 .meta-tag-online {

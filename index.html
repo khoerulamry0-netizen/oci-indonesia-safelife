@@ -107,6 +107,8 @@
             <button type="button" class="quick-pill" data-quick="ed90" aria-pressed="false" data-i18n="quick_ed_90">ED ≤ 90 hari</button>
             <button type="button" class="quick-pill" data-quick="ed180" aria-pressed="false" data-i18n="quick_ed_180">ED ≤ 180 hari</button>
             <button type="button" class="quick-pill" data-quick="pareto" aria-pressed="false" data-i18n="pareto_80">Pareto 80%</button>
+            <button type="button" class="quick-pill" data-quick="active" aria-pressed="false" data-i18n="active_sku_only" hidden>Active SKU</button>
+            <button type="button" class="quick-pill" data-quick="inactive" aria-pressed="false" data-i18n="inactive_sku_only" hidden>Inactive SKU</button>
           </div>
 
           <div class="control-bar-end">
@@ -195,6 +197,15 @@
               <span data-i18n="sku_category_filter">Kategori SKU</span>
               <select id="sku-category-filter">
                 <option value="" data-i18n="all_sku_categories">Semua kategori</option>
+              </select>
+            </label>
+
+            <label id="sku-status-picker" class="filter-field" hidden>
+              <span data-i18n="sku_status_filter">Status SKU Offline</span>
+              <select id="sku-status-filter" disabled>
+                <option value="" data-i18n="all_status">Semua status</option>
+                <option value="active" data-i18n="active_sku_only">Active SKU</option>
+                <option value="inactive" data-i18n="inactive_sku_only">Inactive SKU</option>
               </select>
             </label>
 

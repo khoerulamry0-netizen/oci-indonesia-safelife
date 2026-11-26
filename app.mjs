@@ -96,6 +96,11 @@ const translations = {
     all_stock_cover: 'Semua cover',
     sku_category_filter: 'Kategori SKU',
     all_sku_categories: 'Semua kategori',
+    sku_status_filter: 'Status SKU Offline',
+    active_sku_only: 'Active SKU',
+    inactive_sku_only: 'Inactive SKU',
+    inactive_tag: 'Inactive',
+    stale_suffix: ' · Data lama (sinkronisasi gagal)',
     cover_0_30: '≤ 30 hari',
     cover_31_90: '31–90 hari',
     cover_91_180: '91–180 hari',
@@ -268,6 +273,11 @@ const translations = {
     all_stock_cover: 'All cover periods',
     sku_category_filter: 'SKU category',
     all_sku_categories: 'All categories',
+    sku_status_filter: 'Offline SKU status',
+    active_sku_only: 'Active SKU',
+    inactive_sku_only: 'Inactive SKU',
+    inactive_tag: 'Inactive',
+    stale_suffix: ' · Stale data (sync failed)',
     cover_0_30: '≤ 30 days',
     cover_31_90: '31–90 days',
     cover_91_180: '91–180 days',
@@ -347,6 +357,25 @@ const translations = {
   },
 };
 
+// Helper: ambil elemen DOM dengan error deskriptif jika tidak ditemukan
+function getEl(id) {
+  const el = document.getElementById(id);
+  if (!el) {
+    throw new Error(`Elemen DOM '#${id}' tidak ditemukan di index.html. Periksa apakah elemen tersebut tersedia dan id-nya cocok.`);
+  }
+  return el;
+}
+
+// Helper: ambil elemen dengan querySelector, null-safe
+function getQs(selector) {
+  return document.querySelector(selector);
+}
+
+// Helper: ambil semua elemen dengan querySelectorAll, selalu mengembalikan array
+function getQsAll(selector) {
+  return [...document.querySelectorAll(selector)];
+}
+
 let locale = localStorage.getItem('oci-locale') === 'en' ? 'en' : 'id';
 let number;
 let salesNumber;
@@ -387,7 +416,9 @@ let onlineRecords = [];
 let offlineState = 'loading';
 let onlineState = 'loading';
 let lastSyncAt = null;
+let staleData = false;
 const syncTimes = { offline: null, online: null };
+const staleChannels = { offline: false, online: false };
 
 function recordSyncTime(key, response) {
   const header = response.headers.get('X-Data-Fetched-At');
@@ -395,55 +426,59 @@ function recordSyncTime(key, response) {
   syncTimes[key] = Number.isNaN(fetchedAt.getTime()) ? new Date() : fetchedAt;
   const known = Object.values(syncTimes).filter(Boolean);
   lastSyncAt = known.length ? new Date(Math.min(...known.map(time => time.getTime()))) : null;
+  staleChannels[key] = response.headers.get('X-Stale-Data') === 'true';
+  staleData = staleChannels.offline || staleChannels.online;
 }
 
-const search = document.getElementById('search');
-const filterButtons = [...document.querySelectorAll('#filters button')];
-const quickButtons = [...document.querySelectorAll('#quick-filters button')];
-const tableRows = document.getElementById('rows');
-const tableWrap = document.querySelector('.table-wrap');
-const tableScroll = document.querySelector('.table-scroll');
-const stickyTableHead = document.getElementById('sticky-table-head');
-const inventoryControls = document.querySelector('.inventory-controls');
-const riskFilter = document.getElementById('risk-filter');
-const urgencyFilter = document.getElementById('urgency-filter');
-const expiryRangeFilter = document.getElementById('expiry-range-filter');
-const stockCoverFilter = document.getElementById('stock-cover-filter');
-const skuCategoryPicker = document.getElementById('sku-category-picker');
-const skuCategoryFilter = document.getElementById('sku-category-filter');
-const riskValueFilter = document.getElementById('risk-value-filter');
-const salesVelocityFilter = document.getElementById('sales-velocity-filter');
-const prioritySort = document.getElementById('priority-sort');
-const mobilePrioritySort = document.getElementById('mobile-priority-sort');
-const paretoFilter = document.getElementById('pareto-filter');
-const exportExcelButton = document.getElementById('export-excel');
-const mobileExportExcelButton = document.getElementById('mobile-export-excel');
-const resetFiltersButton = document.getElementById('reset-filters');
-const syncStatus = document.getElementById('sync-status');
-const activeChips = document.getElementById('active-chips');
-const filterBackdrop = document.getElementById('filter-backdrop');
-const filterCloseButton = document.getElementById('filter-close');
-const filterApplyButton = document.getElementById('filter-apply');
-const methodDialog = document.getElementById('method-dialog');
+const search = getEl('search');
+const filterButtons = getQsAll('#filters button');
+const quickButtons = getQsAll('#quick-filters button');
+const tableRows = getEl('rows');
+const tableWrap = getQs('.table-wrap');
+const tableScroll = getQs('.table-scroll');
+const stickyTableHead = getEl('sticky-table-head');
+const inventoryControls = getQs('.inventory-controls');
+const riskFilter = getEl('risk-filter');
+const urgencyFilter = getEl('urgency-filter');
+const expiryRangeFilter = getEl('expiry-range-filter');
+const stockCoverFilter = getEl('stock-cover-filter');
+const skuCategoryPicker = getEl('sku-category-picker');
+const skuCategoryFilter = getEl('sku-category-filter');
+const skuStatusPicker = getEl('sku-status-picker');
+const skuStatusFilter = getEl('sku-status-filter');
+const riskValueFilter = getEl('risk-value-filter');
+const salesVelocityFilter = getEl('sales-velocity-filter');
+const prioritySort = getEl('priority-sort');
+const mobilePrioritySort = getEl('mobile-priority-sort');
+const paretoFilter = getEl('pareto-filter');
+const exportExcelButton = getEl('export-excel');
+const mobileExportExcelButton = getEl('mobile-export-excel');
+const resetFiltersButton = getEl('reset-filters');
+const syncStatus = getEl('sync-status');
+const activeChips = getEl('active-chips');
+const filterBackdrop = getEl('filter-backdrop');
+const filterCloseButton = getEl('filter-close');
+const filterApplyButton = getEl('filter-apply');
+const methodDialog = getEl('method-dialog');
 const methodOpenButtons = [
-  document.getElementById('method-open'),
-  document.getElementById('method-open-footer'),
-].filter(Boolean);
+  getEl('method-open'),
+  getEl('method-open-footer'),
+];
 const methodCloseButtons = [
-  document.getElementById('method-close'),
-  document.getElementById('method-done'),
-].filter(Boolean);
+  getEl('method-close'),
+  getEl('method-done'),
+];
 
 const languageButtons = {
-  id: document.getElementById('language-id'),
-  en: document.getElementById('language-en'),
+  id: getEl('language-id'),
+  en: getEl('language-en'),
 };
 
 const statCards = {
-  risk: document.getElementById('stat-card-risk'),
-  value: document.getElementById('stat-card-value'),
-  stockValue: document.getElementById('stat-card-stock-value'),
-  riskRatio: document.getElementById('stat-card-risk-ratio'),
+  risk: getEl('stat-card-risk'),
+  value: getEl('stat-card-value'),
+  stockValue: getEl('stat-card-stock-value'),
+  riskRatio: getEl('stat-card-risk-ratio'),
 };
 
 const filterDescriptors = [
@@ -452,6 +487,7 @@ const filterDescriptors = [
   { select: expiryRangeFilter, labelKey: 'expiry_range' },
   { select: stockCoverFilter, labelKey: 'stock_cover_filter' },
   { select: skuCategoryFilter, labelKey: 'sku_category_filter' },
+  { select: skuStatusFilter, labelKey: 'sku_status_filter' },
   { select: riskValueFilter, labelKey: 'risk_value_filter' },
   { select: salesVelocityFilter, labelKey: 'sales_velocity' },
   { select: paretoFilter, labelKey: 'pareto' },
@@ -460,10 +496,10 @@ const filterDescriptors = [
 let channel = 'Online';
 let onlineReportsExpired = false;
 const mobileInventory = window.matchMedia('(max-width: 670px)');
-const stockCards = document.getElementById('stock-cards');
-const filterToggle = document.getElementById('filter-toggle');
-const advancedFilters = document.getElementById('advanced-filters');
-const activeFilterCount = document.getElementById('active-filter-count');
+const stockCards = getEl('stock-cards');
+const filterToggle = getEl('filter-toggle');
+const advancedFilters = getEl('advanced-filters');
+const activeFilterCount = getEl('active-filter-count');
 let syncStickyHeader = () => {};
 let refreshStickyHeaderClone = () => {};
 
@@ -653,7 +689,7 @@ function paretoLabel(value) {
 }
 
 function updateSyncStatus() {
-  syncStatus.classList.remove('is-ready', 'is-error');
+  syncStatus.classList.remove('is-ready', 'is-error', 'is-stale');
   if (offlineState === 'loading' || onlineState === 'loading') {
     syncStatus.textContent = t('syncing_data');
     return;
@@ -663,13 +699,18 @@ function updateSyncStatus() {
     syncStatus.classList.add('is-error');
     return;
   }
+  if (staleData) {
+    syncStatus.textContent = t('synced_at').replace('{time}', syncDate.format(lastSyncAt ?? new Date())) + t('stale_suffix');
+    syncStatus.classList.add('is-stale');
+    return;
+  }
   syncStatus.textContent = t('synced_at').replace('{time}', syncDate.format(lastSyncAt ?? new Date()));
   syncStatus.classList.add('is-ready');
 }
 
 function applyLanguage() {
   document.documentElement.lang = locale;
-  for (const element of document.querySelectorAll('[data-i18n]')) {
+  for (const element of getQsAll('[data-i18n]')) {
     const value = t(element.dataset.i18n);
     if (element.tagName === 'OPTION' || element.tagName === 'BUTTON' || element.tagName === 'SUMMARY') {
       element.textContent = value;
@@ -677,12 +718,12 @@ function applyLanguage() {
       element.innerHTML = value;
     }
   }
-  for (const element of document.querySelectorAll('[data-i18n-aria]')) {
+  for (const element of getQsAll('[data-i18n-aria]')) {
     element.setAttribute('aria-label', t(element.dataset.i18nAria));
   }
   search.placeholder = t('search_placeholder');
-  document.querySelector('.channel-tabs').setAttribute('aria-label', t('channel'));
-  document.querySelector('.table-wrap').setAttribute('aria-label', t('inventory_title'));
+  getQs('.channel-tabs').setAttribute('aria-label', t('channel'));
+  getQs('.table-wrap').setAttribute('aria-label', t('inventory_title'));
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
   updateSkuCategoryOptions();
@@ -715,6 +756,15 @@ function updateSkuCategoryVisibility() {
   const showCategory = channel !== 'Offline';
   skuCategoryPicker.hidden = !showCategory;
   skuCategoryFilter.disabled = !showCategory;
+
+  const isOffline = channel === 'Offline';
+  skuStatusPicker.hidden = !isOffline;
+  skuStatusFilter.disabled = !isOffline;
+  for (const btn of quickButtons) {
+    if (btn.dataset.quick === 'active' || btn.dataset.quick === 'inactive') {
+      btn.hidden = !isOffline;
+    }
+  }
 }
 
 function visibleRecords() {
@@ -725,6 +775,7 @@ function visibleRecords() {
     .filter(record => matchesExpiryRange(record.daysLeft, expiryRangeFilter.value))
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel === 'Offline' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
+    .filter(record => channel !== 'Offline' || !skuStatusFilter.value || record.isActive === (skuStatusFilter.value === 'active'))
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -880,6 +931,12 @@ function buildProductMeta(record) {
     tag.textContent = record.skuCategory;
     meta.append(tag);
   }
+  if (record.channel === 'Offline' && record.isActive === false) {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-inactive';
+    tag.textContent = t('inactive_tag');
+    meta.append(tag);
+  }
   return meta;
 }
 
@@ -948,11 +1005,13 @@ function syncQuickFilterPills() {
     const anyExtra = Boolean(urgencyFilter.value || stockCoverFilter.value || skuCategoryFilter.value
       || riskValueFilter.value || salesVelocityFilter.value);
     if (anyExtra) return null;
-    if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value) return 'all';
-    if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value) return 'at-risk';
-    if (!riskFilter.value && expiryRangeFilter.value === '0-90' && !paretoFilter.value) return 'ed90';
-    if (!riskFilter.value && expiryRangeFilter.value === '0-180' && !paretoFilter.value) return 'ed180';
-    if (!riskFilter.value && !expiryRangeFilter.value && paretoFilter.value === 'Pareto 80%') return 'pareto';
+    if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'all';
+    if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'at-risk';
+    if (!riskFilter.value && expiryRangeFilter.value === '0-90' && !paretoFilter.value && !skuStatusFilter.value) return 'ed90';
+    if (!riskFilter.value && expiryRangeFilter.value === '0-180' && !paretoFilter.value && !skuStatusFilter.value) return 'ed180';
+    if (!riskFilter.value && !expiryRangeFilter.value && paretoFilter.value === 'Pareto 80%' && !skuStatusFilter.value) return 'pareto';
+    if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && skuStatusFilter.value === 'active') return 'active';
+    if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && skuStatusFilter.value === 'inactive') return 'inactive';
     return null;
   })();
   for (const btn of quickButtons) {
@@ -1003,7 +1062,7 @@ function resetFilterSelections() {
 }
 
 function draw() {
-  document.getElementById('source-label').textContent = channel === 'all'
+  getEl('source-label').textContent = channel === 'all'
     ? t('all_sources')
     : (channel === 'Online' ? t('online_source') : t('offline_source'));
 
@@ -1018,11 +1077,11 @@ function draw() {
     ? (totalRiskValue / totalStockValue) * 100
     : null;
 
-  document.getElementById('sku-count').textContent = number.format(visible.length);
-  document.getElementById('risk-count').textContent = knownRisk.length ? number.format(totalRiskQty) : '—';
-  document.getElementById('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '—';
-  document.getElementById('stock-value-count').textContent = pricedStock.length ? compactRiskValue(totalStockValue) : '—';
-  document.getElementById('risk-ratio-count').textContent = riskRatioPct !== null
+  getEl('sku-count').textContent = number.format(visible.length);
+  getEl('risk-count').textContent = knownRisk.length ? number.format(totalRiskQty) : '—';
+  getEl('risk-value-count').textContent = pricedRisk.length ? compactRiskValue(totalRiskValue) : '—';
+  getEl('stock-value-count').textContent = pricedStock.length ? compactRiskValue(totalStockValue) : '—';
+  getEl('risk-ratio-count').textContent = riskRatioPct !== null
     ? percentNumber.format(riskRatioPct) + '%'
     : '—';
 
@@ -1030,12 +1089,12 @@ function draw() {
   setCardTone(statCards.value, pricedRisk.length > 0, totalRiskValue);
   setCardTone(statCards.riskRatio, riskRatioPct !== null, riskRatioPct);
 
-  document.getElementById('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
+  getEl('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
   syncQuickFilterPills();
   renderActiveChips();
 
   const dataFiltered = filterDescriptors.some(({ select }) => !select.disabled && Boolean(select.value));
-  document.getElementById('summary-context').textContent =
+  getEl('summary-context').textContent =
     t(dataFiltered || search.value.trim() ? 'summary_filtered' : 'summary_channel') + ' · ' + channelLabel(channel);
 
   tableRows.replaceChildren();
@@ -1111,6 +1170,7 @@ for (const button of filterButtons) {
   button.addEventListener('click', () => {
     channel = button.dataset.channel;
     if (channel === 'Offline') skuCategoryFilter.value = '';
+    if (channel !== 'Offline') skuStatusFilter.value = '';
     for (const item of filterButtons) item.setAttribute('aria-pressed', String(item === button));
     updateSkuCategoryVisibility();
     draw();
@@ -1125,6 +1185,8 @@ for (const button of quickButtons) {
     if (mode === 'ed90') expiryRangeFilter.value = '0-90';
     if (mode === 'ed180') expiryRangeFilter.value = '0-180';
     if (mode === 'pareto') paretoFilter.value = 'Pareto 80%';
+    if (mode === 'active') skuStatusFilter.value = 'active';
+    if (mode === 'inactive') skuStatusFilter.value = 'inactive';
     draw();
   });
 }
@@ -1208,7 +1270,7 @@ async function refreshOffline() {
     if (!response.ok) throw new Error('Offline sheet unavailable');
     const payload = await response.json();
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
-    offlineRecords = portfolio(payload.records).filter(item => item.channel === 'Offline');
+    offlineRecords = portfolio(payload.records);
     recordSyncTime('offline', response);
     offlineState = 'ready';
   } catch (error) {
