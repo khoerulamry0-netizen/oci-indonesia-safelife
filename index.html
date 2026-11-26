@@ -101,14 +101,16 @@
             <input id="search" type="search" placeholder="Cari SKU atau nama produk">
           </label>
 
-          <div class="quick-filters" id="quick-filters" role="group" aria-label="Filter cepat">
-            <button type="button" class="quick-pill" data-quick="all" aria-pressed="true" data-i18n="quick_all">Semua</button>
-            <button type="button" class="quick-pill" data-quick="at-risk" aria-pressed="false" data-i18n="at_risk">Berisiko expired</button>
-            <button type="button" class="quick-pill" data-quick="ed90" aria-pressed="false" data-i18n="quick_ed_90">ED ≤ 90 hari</button>
-            <button type="button" class="quick-pill" data-quick="ed180" aria-pressed="false" data-i18n="quick_ed_180">ED ≤ 180 hari</button>
-            <button type="button" class="quick-pill" data-quick="pareto" aria-pressed="false" data-i18n="pareto_80">Pareto 80%</button>
-            <button type="button" class="quick-pill" data-quick="active" aria-pressed="false" data-i18n="active_sku_only" hidden>Active SKU</button>
-            <button type="button" class="quick-pill" data-quick="inactive" aria-pressed="false" data-i18n="inactive_sku_only" hidden>Inactive SKU</button>
+          <div class="quick-filters-wrap">
+            <div class="quick-filters" id="quick-filters" role="group" aria-label="Filter cepat">
+              <button type="button" class="quick-pill" data-quick="all" aria-pressed="true"><span data-i18n="quick_all">Semua</span><span class="pill-count" data-pill-count="all"></span></button>
+              <button type="button" class="quick-pill" data-quick="at-risk" aria-pressed="false"><span data-i18n="quick_at_risk">Berisiko</span><span class="pill-count" data-pill-count="at-risk"></span></button>
+              <button type="button" class="quick-pill" data-quick="ed90" aria-pressed="false"><span data-i18n="quick_ed_90">ED ≤ 90h</span><span class="pill-count" data-pill-count="ed90"></span></button>
+              <button type="button" class="quick-pill" data-quick="ed180" aria-pressed="false"><span data-i18n="quick_ed_180">ED ≤ 180h</span><span class="pill-count" data-pill-count="ed180"></span></button>
+              <button type="button" class="quick-pill" data-quick="active" aria-pressed="false" hidden><span data-i18n="quick_active">Active</span><span class="pill-count" data-pill-count="active"></span></button>
+              <button type="button" class="quick-pill" data-quick="inactive" aria-pressed="false" hidden><span data-i18n="quick_inactive">Inactive</span><span class="pill-count" data-pill-count="inactive"></span></button>
+              <button type="button" class="quick-pill" data-quick="pareto" aria-pressed="false"><span data-i18n="quick_pareto">Pareto</span><span class="pill-count" data-pill-count="pareto"></span></button>
+            </div>
           </div>
 
           <div class="control-bar-end">
@@ -299,7 +301,7 @@
     </section>
 
     <footer class="page-footer">
-      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.</p>
+      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, maksimal 6 bulan penjualan selesai yang sudah terisi, PARETO OFFLINE, dan status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.</p>
       <button type="button" id="method-open-footer" class="footer-link" data-i18n="method_title">Cara estimasi risiko expired</button>
     </footer>
   </main>

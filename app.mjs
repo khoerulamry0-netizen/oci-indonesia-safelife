@@ -11,8 +11,12 @@ const translations = {
     close_dialog: 'Mengerti',
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
-    quick_ed_90: 'ED ≤ 90 hari',
-    quick_ed_180: 'ED ≤ 180 hari',
+    quick_at_risk: 'Berisiko',
+    quick_ed_90: 'ED ≤ 90h',
+    quick_ed_180: 'ED ≤ 180h',
+    quick_active: 'Active',
+    quick_inactive: 'Inactive',
+    quick_pareto: 'Pareto',
     advanced_filters_title: 'Filter & Urutkan',
     apply_filters: 'Selesai',
     clear_all_filters: 'Hapus semua',
@@ -56,7 +60,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
-    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, rata-rata penjualan 6 bulan terakhir, dan PARETO OFFLINE. Cost kedua channel dipetakan dari tab Master Cost.',
+    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, maksimal 6 bulan penjualan selesai yang sudah terisi, PARETO OFFLINE, dan status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
     search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
@@ -182,8 +186,12 @@ const translations = {
     close_dialog: 'Got it',
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
-    quick_ed_90: 'Expiry ≤ 90d',
-    quick_ed_180: 'Expiry ≤ 180d',
+    quick_at_risk: 'At risk',
+    quick_ed_90: 'ED ≤ 90d',
+    quick_ed_180: 'ED ≤ 180d',
+    quick_active: 'Active',
+    quick_inactive: 'Inactive',
+    quick_pareto: 'Pareto',
     advanced_filters_title: 'Filters & Sort',
     apply_filters: 'Done',
     clear_all_filters: 'Clear all',
@@ -227,7 +235,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
-    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, the latest 6-month average sales, and PARETO OFFLINE. Cost for both channels is mapped from the Master Cost tab.',
+    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, up to 6 completed filled sales months, PARETO OFFLINE, and Active/Inactive SKU status. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
     search_placeholder: 'Search SKU or product name…',
     online: 'Online',
@@ -749,9 +757,9 @@ function updateSkuCategoryVisibility() {
   skuStatusPicker.hidden = !isOffline;
   skuStatusFilter.disabled = !isOffline;
   for (const btn of quickButtons) {
-    if (btn.dataset.quick === 'active' || btn.dataset.quick === 'inactive') {
-      btn.hidden = !isOffline;
-    }
+    const mode = btn.dataset.quick;
+    if (mode === 'active' || mode === 'inactive') btn.hidden = !isOffline;
+    if (mode === 'ed90' || mode === 'ed180') btn.hidden = isOffline;
   }
 }
 
@@ -957,8 +965,11 @@ function appendStockCard(row, record) {
   top.className = 'stock-card-top';
   const title = document.createElement('h3');
   title.className = 'stock-card-title';
-  title.append(...product.childNodes);
+  const titleHeading = product.querySelector('strong');
+  const metaRow = product.querySelector('.product-meta');
+  if (titleHeading) title.append(titleHeading);
   top.append(title, ...status.childNodes);
+  if (metaRow) metaRow.classList.add('stock-card-meta');
 
   const overview = document.createElement('dl');
   overview.className = 'stock-card-metrics';
@@ -981,7 +992,9 @@ function appendStockCard(row, record) {
   ]) appendCardField(breakdown, key, cellEl.firstElementChild ?? cellEl.textContent);
 
   details.append(summary, breakdown);
-  card.append(top, overview, details);
+  card.append(top);
+  if (metaRow) card.append(metaRow);
+  card.append(overview, details);
   stockCards.append(card);
 }
 
@@ -996,6 +1009,36 @@ function setCardTone(card, available, numericValue) {
     card.classList.add('is-zero');
   }
 }
+
+function updateQuickFilterCounts() {
+  const base = filterPortfolio(records, channel, search.value);
+  const counts = {
+    all: base.length,
+    'at-risk': base.filter(record => statusOf(record)[1] === 'at-risk').length,
+    ed90: base.filter(record => matchesExpiryRange(record.daysLeft, '0-90')).length,
+    ed180: base.filter(record => matchesExpiryRange(record.daysLeft, '0-180')).length,
+    active: base.filter(record => record.channel === 'Offline' && record.isActive === true).length,
+    inactive: base.filter(record => record.channel === 'Offline' && record.isActive === false).length,
+    pareto: base.filter(record => record.paretoStatus === 'Pareto 80%').length,
+  };
+  for (const badge of getQsAll('[data-pill-count]')) {
+    const key = badge.dataset.pillCount;
+    badge.textContent = base.length ? number.format(counts[key] ?? 0) : '';
+  }
+  syncQuickFilterFade();
+}
+
+const quickFiltersEl = getEl('quick-filters');
+const quickFiltersWrap = getQs('.quick-filters-wrap');
+
+function syncQuickFilterFade() {
+  if (!quickFiltersEl || !quickFiltersWrap) return;
+  const atEnd = quickFiltersEl.scrollLeft + quickFiltersEl.clientWidth >= quickFiltersEl.scrollWidth - 4;
+  quickFiltersWrap.classList.toggle('is-at-end', atEnd);
+}
+
+quickFiltersEl?.addEventListener('scroll', syncQuickFilterFade, { passive: true });
+window.addEventListener('resize', syncQuickFilterFade);
 
 function syncQuickFilterPills() {
   const activeQuick = (() => {
@@ -1087,6 +1130,7 @@ function draw() {
   setCardTone(statCards.riskRatio, riskRatioPct !== null, riskRatioPct);
 
   getEl('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
+  updateQuickFilterCounts();
   syncQuickFilterPills();
   renderActiveChips();
 
