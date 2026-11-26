@@ -192,6 +192,24 @@ const translations = {
     syncing_data: 'Sinkronisasi data…',
     synced_at: 'Tersinkronisasi {time}',
     sync_issue: 'Sinkronisasi perlu diperiksa',
+    share_view: 'Salin link',
+    link_copied: 'Link tersalin',
+    copy_sku_summary: 'Salin ringkasan',
+    summary_copied: 'Ringkasan tersalin',
+    close_drawer: 'Tutup',
+    showing_of: 'Menampilkan {shown} dari {total} SKU',
+    load_more: 'Muat +{count} lagi',
+    show_all: 'Tampilkan semua',
+    unit_cost: 'Product cost (HPP)',
+    pareto_rank_label: 'Peringkat Pareto',
+    pareto_contrib_label: 'Kontribusi sales',
+    closed_months_label: 'Bulan tutup berpenjualan',
+    sales_and_cover: 'Kecepatan sales & stock cover',
+    batch_breakdown_title: 'Rincian batch & estimasi FEFO',
+    est_sold_qty: 'Est. terjual',
+    batch_risk_value: 'Modal risiko',
+    click_to_filter: 'Klik untuk memfilter',
+    view_details: 'Detail',
   },
   en: {
     brand_title: 'Marketing Control',
@@ -384,6 +402,24 @@ const translations = {
     syncing_data: 'Syncing data…',
     synced_at: 'Synced {time}',
     sync_issue: 'Sync needs attention',
+    share_view: 'Copy link',
+    link_copied: 'Link copied',
+    copy_sku_summary: 'Copy summary',
+    summary_copied: 'Summary copied',
+    close_drawer: 'Close',
+    showing_of: 'Showing {shown} of {total} SKUs',
+    load_more: 'Load +{count} more',
+    show_all: 'Show all',
+    unit_cost: 'Unit cost (COGS)',
+    pareto_rank_label: 'Pareto rank',
+    pareto_contrib_label: 'Sales share',
+    closed_months_label: 'Closed sales months',
+    sales_and_cover: 'Sales velocity & stock cover',
+    batch_breakdown_title: 'Batch & FEFO breakdown',
+    est_sold_qty: 'Est. sold',
+    batch_risk_value: 'Risk value',
+    click_to_filter: 'Click to filter',
+    view_details: 'Details',
   },
 };
 
@@ -487,9 +523,11 @@ const mobilePrioritySort = getEl('mobile-priority-sort');
 const paretoFilter = getEl('pareto-filter');
 const exportExcelButton = getEl('export-excel');
 const mobileExportExcelButton = getEl('mobile-export-excel');
+const shareViewButton = getEl('share-view');
 const resetFiltersButton = getEl('reset-filters');
 const syncStatus = getEl('sync-status');
 const refreshButton = getEl('refresh-data');
+const statsSection = getQs('.stats');
 const riskRatioBar = getEl('risk-ratio-bar');
 const insightsStrip = getEl('insights-strip');
 const insightPrimary = getEl('insight-primary');
@@ -498,6 +536,18 @@ const activeChips = getEl('active-chips');
 const filterBackdrop = getEl('filter-backdrop');
 const filterCloseButton = getEl('filter-close');
 const filterApplyButton = getEl('filter-apply');
+const listPagination = getEl('list-pagination');
+const paginationInfo = getEl('pagination-info');
+const loadMoreBtn = getEl('load-more-btn');
+const showAllBtn = getEl('show-all-btn');
+const skuDrawer = getEl('sku-drawer');
+const skuDrawerBackdrop = getEl('sku-drawer-backdrop');
+const drawerEyebrow = getEl('drawer-eyebrow');
+const drawerTitle = getEl('drawer-title');
+const drawerBody = getEl('drawer-body');
+const drawerClose = getEl('drawer-close');
+const drawerDone = getEl('drawer-done');
+const drawerCopy = getEl('drawer-copy');
 const methodDialog = getEl('method-dialog');
 const methodOpenButtons = [
   getEl('method-open'),
@@ -539,6 +589,115 @@ let sortKey = 'value';
 let sortDir = 'desc';
 let onlineReportsExpired = false;
 const mobileInventory = window.matchMedia('(max-width: 670px)');
+function defaultPageSize() {
+  return mobileInventory.matches ? 30 : 60;
+}
+let renderLimit = defaultPageSize();
+function resetPagination() {
+  renderLimit = defaultPageSize();
+}
+let activeDrawerRecord = null;
+let drawerOpener = null;
+let pendingCategory = '';
+let pendingSwcNote = '';
+
+const urlParamBindings = [
+  ['q', search],
+  ['risk', riskFilter],
+  ['urg', urgencyFilter],
+  ['ed', expiryRangeFilter],
+  ['cover', stockCoverFilter],
+  ['cat', skuCategoryFilter],
+  ['sku', skuStatusFilter],
+  ['oos', oosFilter],
+  ['swc', swcNoteFilter],
+  ['val', riskValueFilter],
+  ['vel', salesVelocityFilter],
+  ['pareto', paretoFilter],
+];
+
+function readUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  const ch = params.get('ch');
+  if (ch === 'all' || ch === 'Online' || ch === 'Offline') {
+    channel = ch;
+    for (const btn of filterButtons) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.channel === channel));
+    }
+  }
+  const sortParam = params.get('sort');
+  if (sortParam && Object.hasOwn(defaultSortDir, sortParam)) {
+    sortKey = sortParam;
+    const dirParam = params.get('dir');
+    sortDir = dirParam === 'asc' || dirParam === 'desc' ? dirParam : (defaultSortDir[sortKey] ?? 'desc');
+  }
+  for (const [key, control] of urlParamBindings) {
+    const val = params.get(key);
+    if (!val) continue;
+    if (key === 'cat') pendingCategory = val;
+    else if (key === 'swc') pendingSwcNote = val;
+    else if (control === search || [...control.options].some(opt => opt.value === val)) {
+      control.value = val;
+    }
+  }
+  updateSkuCategoryVisibility();
+}
+
+function syncUrlState() {
+  const params = new URLSearchParams();
+  if (channel !== 'Online') params.set('ch', channel);
+  for (const [key, control] of urlParamBindings) {
+    const val = key === 'q' ? control.value.trim() : (!control.disabled ? control.value : '');
+    if (val) params.set(key, val);
+    else if (key === 'cat' && pendingCategory && channel !== 'Offline') params.set(key, pendingCategory);
+    else if (key === 'swc' && pendingSwcNote && channel === 'Offline') params.set(key, pendingSwcNote);
+  }
+  if (sortKey !== 'value' || sortDir !== 'desc') {
+    params.set('sort', sortKey);
+    params.set('dir', sortDir);
+  }
+  const qs = params.toString();
+  const nextUrl = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+  if (nextUrl !== window.location.pathname + window.location.search + window.location.hash) {
+    history.replaceState(null, '', nextUrl);
+  }
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch { /* fallback below */ }
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.append(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  return ok;
+}
+
+function setChannel(nextChannel) {
+  channel = nextChannel;
+  if (channel === 'Offline') {
+    skuCategoryFilter.value = '';
+    pendingCategory = '';
+  } else {
+    skuStatusFilter.value = '';
+    oosFilter.value = '';
+    swcNoteFilter.value = '';
+    pendingSwcNote = '';
+  }
+  for (const item of filterButtons) item.setAttribute('aria-pressed', String(item.dataset.channel === channel));
+  resetPagination();
+  updateSkuCategoryVisibility();
+  draw();
+}
 const stockCards = getEl('stock-cards');
 const filterToggle = getEl('filter-toggle');
 const advancedFilters = getEl('advanced-filters');
@@ -775,10 +934,11 @@ function applyLanguage() {
   updateSkuCategoryVisibility();
   updateSyncStatus();
   applySortIndicators();
+  if (activeDrawerRecord && !skuDrawer.hidden) openSkuDrawer(activeDrawerRecord, drawerOpener);
 }
 
 function updateSkuCategoryOptions() {
-  const selected = skuCategoryFilter.value;
+  const selected = pendingCategory || skuCategoryFilter.value;
   const categories = [...new Set(onlineRecords
     .map(record => String(record.skuCategory ?? '').trim())
     .filter(Boolean))]
@@ -794,11 +954,16 @@ function updateSkuCategoryOptions() {
     option.textContent = category;
     skuCategoryFilter.append(option);
   }
-  skuCategoryFilter.value = categories.includes(selected) ? selected : '';
+  if (categories.includes(selected)) {
+    skuCategoryFilter.value = selected;
+    pendingCategory = '';
+  } else {
+    skuCategoryFilter.value = '';
+  }
 }
 
 function updateSwcNoteOptions() {
-  const selected = swcNoteFilter.value;
+  const selected = pendingSwcNote || swcNoteFilter.value;
   const notes = [...new Set(offlineRecords
     .map(record => String(record.swcNote ?? '').trim())
     .filter(Boolean))]
@@ -814,7 +979,12 @@ function updateSwcNoteOptions() {
     option.textContent = note;
     swcNoteFilter.append(option);
   }
-  swcNoteFilter.value = notes.includes(selected) ? selected : '';
+  if (notes.includes(selected)) {
+    swcNoteFilter.value = selected;
+    pendingSwcNote = '';
+  } else {
+    swcNoteFilter.value = '';
+  }
 }
 
 function updateSkuCategoryVisibility() {
@@ -1143,6 +1313,10 @@ function appendStockCard(row, record) {
   card.append(top);
   if (metaRow) card.append(metaRow);
   card.append(overview, details);
+  card.addEventListener('click', event => {
+    if (event.target.closest('details, summary, a, button')) return;
+    openSkuDrawer(record, card);
+  });
   stockCards.append(card);
 }
 
@@ -1228,6 +1402,9 @@ function renderActiveChips() {
     remove.setAttribute('aria-label', t(labelKey));
     remove.addEventListener('click', () => {
       select.value = '';
+      if (select === skuCategoryFilter) pendingCategory = '';
+      if (select === swcNoteFilter) pendingSwcNote = '';
+      resetPagination();
       draw();
     });
     chip.append(remove);
@@ -1243,11 +1420,14 @@ function renderActiveChips() {
 
 function resetFilterSelections() {
   search.value = '';
+  pendingCategory = '';
+  pendingSwcNote = '';
   for (const { select } of filterDescriptors) select.value = '';
   sortKey = 'value';
   sortDir = 'desc';
   prioritySort.value = 'value';
   if (mobilePrioritySort) mobilePrioritySort.value = 'value';
+  resetPagination();
   applySortIndicators();
   draw();
 }
@@ -1273,10 +1453,19 @@ function renderInsightCard(container, title, totalValue, items) {
     if (!(item.value > 0)) continue;
     const pct = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
     const seg = document.createElement('span');
-    seg.className = 'insight-seg';
+    seg.className = 'insight-seg' + (item.onClick ? ' is-interactive' : '') + (item.isActive ? ' is-active' : '');
     seg.style.width = pct.toFixed(2) + '%';
     seg.style.backgroundColor = item.color;
-    seg.title = item.label + ': ' + compactRiskValue(item.value) + ' (' + percentNumber.format(pct) + '%)';
+    seg.title = item.label + ': ' + compactRiskValue(item.value) + ' (' + percentNumber.format(pct) + '%)'
+      + (item.onClick ? ' · ' + t('click_to_filter') : '');
+    if (item.onClick) {
+      seg.setAttribute('role', 'button');
+      seg.tabIndex = 0;
+      seg.addEventListener('click', item.onClick);
+      seg.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.onClick(); }
+      });
+    }
     bar.append(seg);
 
     const li = document.createElement('li');
@@ -1287,10 +1476,28 @@ function renderInsightCard(container, title, totalValue, items) {
     nameEl.textContent = item.label;
     const valEl = document.createElement('strong');
     valEl.textContent = compactRiskValue(item.value) + ' (' + percentNumber.format(pct) + '%)';
-    li.append(dot, nameEl, valEl);
+
+    if (item.onClick) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'insight-legend-btn' + (item.isActive ? ' is-active' : '');
+      btn.setAttribute('aria-pressed', String(Boolean(item.isActive)));
+      btn.title = t('click_to_filter');
+      btn.append(dot, nameEl, valEl);
+      btn.addEventListener('click', item.onClick);
+      li.append(btn);
+    } else {
+      li.append(dot, nameEl, valEl);
+    }
     legend.append(li);
   }
   container.append(head, bar, legend);
+}
+
+function toggleSelectFilter(select, targetValue) {
+  select.value = select.value === targetValue ? '' : targetValue;
+  resetPagination();
+  draw();
 }
 
 function renderInsights(visible, totalRiskValue) {
@@ -1310,8 +1517,8 @@ function renderInsights(visible, totalRiskValue) {
       else onlineVal += rv;
     }
     renderInsightCard(insightPrimary, t('insight_channel_split'), onlineVal + offlineVal, [
-      { label: t('online'), value: onlineVal, color: '#882653' },
-      { label: 'Offline', value: offlineVal, color: '#0284c7' },
+      { label: t('online'), value: onlineVal, color: '#882653', onClick: () => setChannel('Online') },
+      { label: 'Offline', value: offlineVal, color: '#0284c7', onClick: () => setChannel('Offline') },
     ]);
   } else if (channel === 'Offline') {
     let activeVal = 0;
@@ -1323,8 +1530,16 @@ function renderInsights(visible, totalRiskValue) {
       else inactiveVal += rv;
     }
     renderInsightCard(insightPrimary, t('insight_offline_status'), activeVal + inactiveVal, [
-      { label: t('active_sku_only'), value: activeVal, color: '#882653' },
-      { label: t('inactive_sku_only'), value: inactiveVal, color: '#d97706' },
+      {
+        label: t('active_sku_only'), value: activeVal, color: '#882653',
+        isActive: skuStatusFilter.value === 'active',
+        onClick: () => toggleSelectFilter(skuStatusFilter, 'active'),
+      },
+      {
+        label: t('inactive_sku_only'), value: inactiveVal, color: '#d97706',
+        isActive: skuStatusFilter.value === 'inactive',
+        onClick: () => toggleSelectFilter(skuStatusFilter, 'inactive'),
+      },
     ]);
   } else {
     const byCat = new Map();
@@ -1336,7 +1551,15 @@ function renderInsights(visible, totalRiskValue) {
     }
     const sorted = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
     const palette = ['#882653', '#0284c7', '#d97706', '#64748b'];
-    const top = sorted.slice(0, 3).map(([label, value], i) => ({ label, value, color: palette[i] }));
+    const top = sorted.slice(0, 3).map(([label, value], i) => ({
+      label,
+      value,
+      color: palette[i],
+      isActive: label !== t('unmapped') && skuCategoryFilter.value === label,
+      onClick: label !== t('unmapped') && [...skuCategoryFilter.options].some(o => o.value === label)
+        ? () => toggleSelectFilter(skuCategoryFilter, label)
+        : null,
+    }));
     const otherSum = sorted.slice(3).reduce((acc, [, v]) => acc + v, 0);
     if (otherSum > 0) top.push({ label: t('insight_other'), value: otherSum, color: palette[3] });
     renderInsightCard(insightPrimary, t('insight_category_top'), totalRiskValue, top);
@@ -1366,16 +1589,265 @@ function renderInsights(visible, totalRiskValue) {
   }
   const expTotal = le90 + b91_180 + gt180;
   renderInsightCard(insightExpiry, t('insight_expiry_dist'), expTotal, [
-    { label: t('bucket_le_90'), value: le90, color: '#dc2626' },
-    { label: t('bucket_91_180'), value: b91_180, color: '#f59e0b' },
-    { label: t('bucket_gt_180'), value: gt180, color: '#882653' },
+    {
+      label: t('bucket_le_90'), value: le90, color: '#dc2626',
+      isActive: expiryRangeFilter.value === '0-90',
+      onClick: () => toggleSelectFilter(expiryRangeFilter, '0-90'),
+    },
+    {
+      label: t('bucket_91_180'), value: b91_180, color: '#f59e0b',
+      isActive: expiryRangeFilter.value === '91-180',
+      onClick: () => toggleSelectFilter(expiryRangeFilter, '91-180'),
+    },
+    {
+      label: t('bucket_gt_180'), value: gt180, color: '#882653',
+      isActive: expiryRangeFilter.value === '180-plus',
+      onClick: () => toggleSelectFilter(expiryRangeFilter, '180-plus'),
+    },
   ]);
+}
+
+function isChannelLoading() {
+  if (channel === 'Online') return onlineState === 'loading';
+  if (channel === 'Offline') return offlineState === 'loading';
+  return (onlineState === 'loading' || offlineState === 'loading') && !records.length;
+}
+
+function renderSkeletons() {
+  if (mobileInventory.matches) {
+    for (let i = 0; i < 4; i++) {
+      const card = document.createElement('li');
+      card.className = 'stock-card skeleton-card';
+      card.setAttribute('aria-hidden', 'true');
+      card.innerHTML = '<span class="skeleton-line w-70"></span><span class="skeleton-line w-40"></span><span class="skeleton-line w-90"></span>';
+      stockCards.append(card);
+    }
+    return;
+  }
+  const colWidths = ['w-85', 'w-45', 'w-65', 'w-35', 'w-35', 'w-40', 'w-35', 'w-35', 'w-35', 'w-80', 'w-45', 'w-70'];
+  for (let i = 0; i < 6; i++) {
+    const tr = tableRows.insertRow();
+    tr.className = 'skeleton-row';
+    tr.setAttribute('aria-hidden', 'true');
+    for (const widthClass of colWidths) {
+      const td = tr.insertCell();
+      const bar = document.createElement('span');
+      bar.className = 'skeleton-line ' + widthClass;
+      td.append(bar);
+    }
+  }
+}
+
+function promoRecommendation(record) {
+  if (!(record.risk > 0)) return null;
+  if (record.daysLeft === null || record.daysLeft <= 30) return { title: t('promo_now'), detail: t('promo_now_detail'), tone: 'urgent' };
+  if (record.daysLeft <= 90) return { title: t('high_priority'), detail: t('high_priority_detail'), tone: 'high' };
+  if (record.daysLeft <= 180) return { title: t('promo_priority'), detail: t('promo_priority_detail'), tone: 'medium' };
+  return { title: t('scheduled_campaign'), detail: t('scheduled_campaign_detail'), tone: 'low' };
+}
+
+function buildSkuSummaryText(record) {
+  const [statusLabel] = statusOf(record);
+  const stockVal = pricedStockValue(record);
+  const riskVal = pricedRiskValue(record);
+  const firstExp = record.expiries?.find(e => e.days >= 0);
+  const lines = [
+    record.name,
+    `SKU: ${record.sku} | Channel: ${channelLabel(record.channel)}`,
+    `Stok: ${number.format(record.stock)} pcs` + (Number.isFinite(stockVal) ? ` (${formatRupiah(stockVal)})` : ''),
+    `Sales/bln: ${salesFormat(record.averageMonthlySales)} pcs | Cover: ${stockCoverMonthsFormat(record.stockCoverDays)} bln`,
+    `Risiko expired: ${record.risk === null ? '—' : number.format(record.risk) + ' pcs'}` + (Number.isFinite(riskVal) ? ` (${formatRupiah(riskVal)})` : ''),
+    `ED terdekat: ${firstExp ? date.format(firstExp.date) + ' (' + number.format(firstExp.days) + ' hari lagi)' : '—'}`,
+    `Status: ${statusLabel}`,
+  ];
+  return lines.join('\n');
+}
+
+function addDrawerKpi(grid, label, value, toneClass = '') {
+  const card = document.createElement('div');
+  card.className = 'drawer-kpi';
+  const dt = document.createElement('span');
+  dt.className = 'drawer-kpi-label';
+  dt.textContent = label;
+  const dd = document.createElement('strong');
+  dd.className = 'drawer-kpi-value' + (toneClass ? ' ' + toneClass : '');
+  dd.textContent = value;
+  card.append(dt, dd);
+  grid.append(card);
+}
+
+function openSkuDrawer(record, triggerEl = null) {
+  activeDrawerRecord = record;
+  drawerOpener = triggerEl || document.activeElement;
+  const [statusLabel, statusClass] = statusOf(record);
+
+  drawerEyebrow.replaceChildren();
+  const chTag = document.createElement('span');
+  chTag.className = 'meta-tag ' + (record.channel === 'Offline' ? 'meta-tag-channel-offline' : 'meta-tag-channel-online');
+  chTag.textContent = channelLabel(record.channel);
+  const skuTag = document.createElement('span');
+  skuTag.className = 'sku-code';
+  skuTag.textContent = record.sku;
+  const statusPill = document.createElement('span');
+  statusPill.className = 'status ' + statusClass;
+  statusPill.textContent = statusLabel;
+  drawerEyebrow.append(chTag, skuTag, statusPill);
+  drawerTitle.textContent = record.name;
+
+  drawerBody.replaceChildren();
+
+  const metaTags = buildProductMeta(record);
+  if (record.paretoRank || Number.isFinite(record.paretoContribution)) {
+    const paretoInfo = document.createElement('span');
+    paretoInfo.className = 'meta-tag meta-tag-pareto';
+    const parts = [];
+    if (record.paretoRank) parts.push('#' + number.format(record.paretoRank));
+    if (Number.isFinite(record.paretoContribution)) parts.push(percentNumber.format(record.paretoContribution) + '%');
+    paretoInfo.textContent = 'Pareto ' + parts.join(' · ');
+    metaTags.append(paretoInfo);
+  }
+  drawerBody.append(metaTags);
+
+  const promo = promoRecommendation(record);
+  if (promo) {
+    const banner = document.createElement('div');
+    banner.className = 'drawer-action-banner is-' + promo.tone;
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = t('recommended_action') + ': ' + promo.title;
+    const descEl = document.createElement('span');
+    descEl.textContent = promo.detail;
+    banner.append(titleEl, descEl);
+    drawerBody.append(banner);
+  }
+
+  const kpiGrid = document.createElement('div');
+  kpiGrid.className = 'drawer-kpi-grid';
+  const stockVal = pricedStockValue(record);
+  const riskVal = pricedRiskValue(record);
+  addDrawerKpi(kpiGrid, t('unit_cost'), Number.isFinite(record.productCost) ? formatRupiah(record.productCost) : '—');
+  addDrawerKpi(kpiGrid, t('total_stock_value'), Number.isFinite(stockVal) ? formatRupiah(stockVal) : '—');
+  addDrawerKpi(kpiGrid, t('at_risk_value'), Number.isFinite(riskVal) ? formatRupiah(riskVal) : '—', riskVal > 0 ? 'is-risk' : '');
+  addDrawerKpi(
+    kpiGrid,
+    t('available_stock').replace('<br>', ' '),
+    number.format(record.stock) + ' pcs' + (record.risk !== null ? ' · ' + number.format(record.risk) + ' ' + t('batch_risk') : ''),
+    record.risk > 0 ? 'is-qty-risk' : '',
+  );
+  drawerBody.append(kpiGrid);
+
+  const metricsSection = document.createElement('div');
+  metricsSection.className = 'drawer-section';
+  const metricsHeading = document.createElement('h3');
+  metricsHeading.textContent = t('sales_and_cover');
+  const miniTable = document.createElement('table');
+  miniTable.className = 'drawer-mini-table';
+  miniTable.innerHTML = '<thead><tr><th></th><th>' + escapeHtml(t('day_unit')) + '</th><th>' + escapeHtml(t('week_unit')) + '</th><th>' + escapeHtml(t('month_unit')) + '</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  const rSales = tb.insertRow();
+  rSales.insertCell().textContent = t('average_sales');
+  rSales.insertCell().textContent = salesFormat(record.averageDailySales);
+  rSales.insertCell().textContent = salesFormat(record.averageWeeklySales);
+  rSales.insertCell().textContent = salesFormat(record.averageMonthlySales);
+  const rCover = tb.insertRow();
+  rCover.insertCell().textContent = t('stock_cover_filter');
+  rCover.insertCell().textContent = stockCoverFormat(record.stockCoverDays);
+  rCover.insertCell().textContent = stockCoverWeeksFormat(record.stockCoverDays);
+  rCover.insertCell().textContent = stockCoverMonthsFormat(record.stockCoverDays);
+  miniTable.append(tb);
+  metricsSection.append(metricsHeading, miniTable);
+  if (record.channel === 'Offline' && Number.isFinite(record.completedSalesMonths)) {
+    const note = document.createElement('p');
+    note.className = 'drawer-footnote';
+    note.textContent = t('closed_months_label') + ': ' + number.format(record.completedSalesMonths);
+    metricsSection.append(note);
+  }
+  drawerBody.append(metricsSection);
+
+  const batchSection = document.createElement('div');
+  batchSection.className = 'drawer-section';
+  const batchHeading = document.createElement('h3');
+  batchHeading.textContent = t('batch_breakdown_title');
+  batchSection.append(batchHeading);
+
+  if (!record.expiries?.length && !record.undatedStock) {
+    const emptyBatch = document.createElement('p');
+    emptyBatch.className = 'drawer-footnote';
+    emptyBatch.textContent = statusLabel;
+    batchSection.append(emptyBatch);
+  } else {
+    const list = document.createElement('ul');
+    list.className = 'drawer-batch-list';
+    for (const exp of record.expiries ?? []) {
+      const li = document.createElement('li');
+      li.className = 'drawer-batch-item';
+      const top = document.createElement('div');
+      top.className = 'drawer-batch-top';
+      const dateStrong = document.createElement('strong');
+      dateStrong.textContent = date.format(exp.date) + ' · ' + number.format(exp.qty) + ' pcs';
+      const tone = expiryRiskTone(exp);
+      const badge = document.createElement('span');
+      badge.className = 'batch-risk ' + tone;
+      badge.textContent = expiryRiskLabel(exp);
+      top.append(dateStrong, badge);
+      li.append(top);
+
+      if (exp.days >= 0 && exp.riskQty !== null) {
+        const soldQty = Math.max(0, exp.qty - exp.riskQty);
+        const riskPct = exp.qty > 0 ? (exp.riskQty / exp.qty) * 100 : 0;
+        const sub = document.createElement('div');
+        sub.className = 'drawer-batch-sub';
+        const batchRiskRp = Number.isFinite(record.productCost) && exp.riskQty > 0
+          ? ' · ' + t('batch_risk_value') + ': ' + formatRupiah(exp.riskQty * record.productCost)
+          : '';
+        sub.textContent = number.format(exp.days) + ' ' + t('days_left')
+          + ' · ' + t('est_sold_qty') + ': ' + number.format(soldQty) + ' pcs' + batchRiskRp;
+        const barWrap = document.createElement('div');
+        barWrap.className = 'drawer-batch-bar';
+        const fill = document.createElement('span');
+        fill.className = 'drawer-batch-bar-fill ' + (exp.riskQty > 0 ? 'is-risk' : 'is-safe');
+        fill.style.width = Math.max(exp.riskQty > 0 ? 4 : 100, exp.riskQty > 0 ? riskPct : 100).toFixed(1) + '%';
+        barWrap.append(fill);
+        li.append(sub, barWrap);
+      }
+      list.append(li);
+    }
+    if (record.undatedStock > 0) {
+      const li = document.createElement('li');
+      li.className = 'drawer-batch-item';
+      li.innerHTML = '<div class="drawer-batch-top"><strong>' + escapeHtml(t('without_expiry')) + ' · ' + escapeHtml(number.format(record.undatedStock)) + ' pcs</strong></div>';
+      list.append(li);
+    }
+    batchSection.append(list);
+  }
+  drawerBody.append(batchSection);
+
+  skuDrawerBackdrop.hidden = false;
+  skuDrawer.hidden = false;
+  document.body.style.overflow = 'hidden';
+  drawerClose.focus();
+}
+
+function closeSkuDrawer() {
+  if (skuDrawer.hidden) return;
+  skuDrawer.hidden = true;
+  skuDrawerBackdrop.hidden = true;
+  if (!(filterToggle.getAttribute('aria-expanded') === 'true' && mobileInventory.matches)) {
+    document.body.style.overflow = '';
+  }
+  activeDrawerRecord = null;
+  if (drawerOpener && typeof drawerOpener.focus === 'function') {
+    drawerOpener.focus();
+  }
+  drawerOpener = null;
 }
 
 function draw() {
   getEl('source-label').textContent = channel === 'all'
     ? t('all_sources')
     : (channel === 'Online' ? t('online_source') : t('offline_source'));
+
+  const loading = isChannelLoading();
+  statsSection?.classList.toggle('is-loading', loading);
 
   const visible = visibleRecords();
   const knownRisk = visible.filter(record => record.risk !== null);
@@ -1399,6 +1871,11 @@ function draw() {
   setCardTone(statCards.risk, knownRisk.length > 0, totalRiskQty);
   setCardTone(statCards.value, pricedRisk.length > 0, totalRiskValue);
   setCardTone(statCards.riskRatio, riskRatioPct !== null, riskRatioPct);
+  const atRiskOnlyActive = riskFilter.value === 'at-risk';
+  statCards.risk?.classList.toggle('is-active-filter', atRiskOnlyActive);
+  statCards.value?.classList.toggle('is-active-filter', atRiskOnlyActive);
+  statCards.risk?.setAttribute('aria-pressed', String(atRiskOnlyActive));
+  statCards.value?.setAttribute('aria-pressed', String(atRiskOnlyActive));
   riskRatioBar.style.width = riskRatioPct !== null
     ? Math.min(100, Math.max(0, riskRatioPct)).toFixed(1) + '%'
     : '0%';
@@ -1408,6 +1885,7 @@ function draw() {
   updateQuickFilterCounts();
   syncQuickFilterPills();
   renderActiveChips();
+  syncUrlState();
 
   const dataFiltered = filterDescriptors.some(({ select }) => !select.disabled && Boolean(select.value));
   getEl('summary-context').textContent =
@@ -1417,26 +1895,39 @@ function draw() {
   stockCards.replaceChildren();
 
   if (!visible.length) {
-    let label = t('no_match');
-    if (channel === 'all' && offlineState === 'loading' && onlineState === 'loading') label = t('loading_all');
-    if (channel === 'all' && offlineState === 'error' && onlineState === 'error') label = t('all_error');
-    if (channel === 'Offline' && offlineState === 'loading') label = t('loading_offline');
-    if (channel === 'Offline' && offlineState === 'error') label = t('offline_error');
-    if (channel === 'Online' && onlineState === 'loading') label = t('loading_online');
-    if (channel === 'Online' && onlineState === 'error') label = t('online_error');
-    if (mobileInventory.matches) {
-      const message = document.createElement('li');
-      message.className = 'empty';
-      message.textContent = label;
-      stockCards.append(message);
+    if (loading) {
+      renderSkeletons();
     } else {
-      const message = cell(tableRows.insertRow(), label, 'empty');
-      message.colSpan = 12;
+      let label = t('no_match');
+      if (channel === 'all' && offlineState === 'error' && onlineState === 'error') label = t('all_error');
+      if (channel === 'Offline' && offlineState === 'error') label = t('offline_error');
+      if (channel === 'Online' && onlineState === 'error') label = t('online_error');
+      if (mobileInventory.matches) {
+        const message = document.createElement('li');
+        message.className = 'empty';
+        message.textContent = label;
+        stockCards.append(message);
+      } else {
+        const message = cell(tableRows.insertRow(), label, 'empty');
+        message.colSpan = 12;
+      }
     }
   }
 
-  for (const record of visible) {
+  const pageItems = visible.slice(0, renderLimit);
+  for (const record of pageItems) {
     const row = mobileInventory.matches ? document.createElement('tr') : tableRows.insertRow();
+    if (!mobileInventory.matches) {
+      row.className = 'is-clickable';
+      row.tabIndex = 0;
+      row.addEventListener('click', () => openSkuDrawer(record, row));
+      row.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openSkuDrawer(record, row);
+        }
+      });
+    }
     const riskValue = pricedRiskValue(record);
 
     const product = cell(row, '', 'product');
@@ -1474,6 +1965,18 @@ function draw() {
 
     if (mobileInventory.matches) appendStockCard(row, record);
   }
+
+  const remaining = visible.length - pageItems.length;
+  if (listPagination) {
+    listPagination.hidden = remaining <= 0;
+    if (remaining > 0) {
+      paginationInfo.textContent = t('showing_of')
+        .replace('{shown}', number.format(pageItems.length))
+        .replace('{total}', number.format(visible.length));
+      loadMoreBtn.textContent = t('load_more')
+        .replace('{count}', number.format(Math.min(defaultPageSize(), remaining)));
+    }
+  }
   syncStickyHeader();
 }
 
@@ -1483,23 +1986,24 @@ function mergeRecords() {
 }
 
 for (const button of filterButtons) {
-  button.addEventListener('click', () => {
-    channel = button.dataset.channel;
-    if (channel === 'Offline') skuCategoryFilter.value = '';
-    if (channel !== 'Offline') {
-      skuStatusFilter.value = '';
-      oosFilter.value = '';
-      swcNoteFilter.value = '';
+  button.addEventListener('click', () => setChannel(button.dataset.channel));
+}
+
+for (const card of [statCards.risk, statCards.value]) {
+  card?.addEventListener('click', () => toggleSelectFilter(riskFilter, 'at-risk'));
+  card?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleSelectFilter(riskFilter, 'at-risk');
     }
-    for (const item of filterButtons) item.setAttribute('aria-pressed', String(item === button));
-    updateSkuCategoryVisibility();
-    draw();
   });
 }
 
 for (const button of quickButtons) {
   button.addEventListener('click', () => {
     const mode = button.dataset.quick;
+    pendingCategory = '';
+    pendingSwcNote = '';
     for (const { select } of filterDescriptors) select.value = '';
     if (mode === 'at-risk') riskFilter.value = 'at-risk';
     if (mode === 'ed90') expiryRangeFilter.value = '0-90';
@@ -1507,6 +2011,7 @@ for (const button of quickButtons) {
     if (mode === 'pareto') paretoFilter.value = 'Pareto 80%';
     if (mode === 'active') skuStatusFilter.value = 'active';
     if (mode === 'inactive') skuStatusFilter.value = 'inactive';
+    resetPagination();
     draw();
   });
 }
@@ -1528,12 +2033,55 @@ filterToggle.addEventListener('click', () => {
 filterCloseButton?.addEventListener('click', () => setFiltersExpanded(false));
 filterApplyButton?.addEventListener('click', () => setFiltersExpanded(false));
 filterBackdrop?.addEventListener('click', () => setFiltersExpanded(false));
+drawerClose?.addEventListener('click', closeSkuDrawer);
+drawerDone?.addEventListener('click', closeSkuDrawer);
+skuDrawerBackdrop?.addEventListener('click', closeSkuDrawer);
+
+drawerCopy?.addEventListener('click', async () => {
+  if (!activeDrawerRecord) return;
+  const ok = await copyText(buildSkuSummaryText(activeDrawerRecord));
+  if (!ok) return;
+  const labelSpan = drawerCopy.querySelector('span');
+  if (labelSpan) labelSpan.textContent = t('summary_copied');
+  setTimeout(() => {
+    if (labelSpan) labelSpan.textContent = t('copy_sku_summary');
+  }, 1800);
+});
+
+shareViewButton?.addEventListener('click', async () => {
+  const ok = await copyText(window.location.href);
+  if (!ok) return;
+  const labelSpan = shareViewButton.querySelector('span');
+  if (labelSpan) labelSpan.textContent = t('link_copied');
+  shareViewButton.classList.add('is-copied');
+  setTimeout(() => {
+    if (labelSpan) labelSpan.textContent = t('share_view');
+    shareViewButton.classList.remove('is-copied');
+  }, 2000);
+});
+
+loadMoreBtn?.addEventListener('click', () => {
+  renderLimit += defaultPageSize();
+  draw();
+});
+
+showAllBtn?.addEventListener('click', () => {
+  renderLimit = Infinity;
+  draw();
+});
 
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape' || filterToggle.getAttribute('aria-expanded') !== 'true') return;
-  event.preventDefault();
-  setFiltersExpanded(false);
-  filterToggle.focus();
+  if (event.key !== 'Escape') return;
+  if (skuDrawer && !skuDrawer.hidden) {
+    event.preventDefault();
+    closeSkuDrawer();
+    return;
+  }
+  if (filterToggle.getAttribute('aria-expanded') === 'true') {
+    event.preventDefault();
+    setFiltersExpanded(false);
+    filterToggle.focus();
+  }
 });
 
 for (const button of methodOpenButtons) {
@@ -1551,13 +2099,19 @@ methodDialog?.addEventListener('click', event => {
 });
 
 for (const { select } of filterDescriptors) {
-  select.addEventListener('change', draw);
+  select.addEventListener('change', () => {
+    if (select === skuCategoryFilter) pendingCategory = '';
+    if (select === swcNoteFilter) pendingSwcNote = '';
+    resetPagination();
+    draw();
+  });
 }
 
 prioritySort.addEventListener('change', () => {
   sortKey = prioritySort.value;
   sortDir = defaultSortDir[sortKey] ?? 'desc';
   if (mobilePrioritySort) mobilePrioritySort.value = prioritySort.value;
+  resetPagination();
   applySortIndicators();
   draw();
 });
@@ -1566,6 +2120,7 @@ mobilePrioritySort?.addEventListener('change', () => {
   sortKey = mobilePrioritySort.value;
   sortDir = defaultSortDir[sortKey] ?? 'desc';
   prioritySort.value = mobilePrioritySort.value;
+  resetPagination();
   applySortIndicators();
   draw();
 });
@@ -1580,6 +2135,7 @@ tableWrap?.addEventListener('click', event => {
     sortKey = key;
     sortDir = defaultSortDir[key] ?? 'desc';
   }
+  resetPagination();
   applySortIndicators();
   draw();
 });
@@ -1591,6 +2147,7 @@ refreshButton?.addEventListener('click', async () => {
   offlineState = 'loading';
   onlineState = 'loading';
   updateSyncStatus();
+  draw();
   try {
     await Promise.all([refreshOffline(true), refreshOnline(true)]);
   } finally {
@@ -1602,12 +2159,16 @@ refreshButton?.addEventListener('click', async () => {
 mobileInventory.addEventListener('change', () => {
   if (!mobileInventory.matches) {
     filterBackdrop.hidden = true;
-    document.body.style.overflow = '';
+    if (skuDrawer.hidden) document.body.style.overflow = '';
   }
+  resetPagination();
   draw();
 });
 
-search.addEventListener('input', draw);
+search.addEventListener('input', () => {
+  resetPagination();
+  draw();
+});
 exportExcelButton.addEventListener('click', exportExcelFile);
 mobileExportExcelButton?.addEventListener('click', () => {
   exportExcelFile();
@@ -1615,6 +2176,7 @@ mobileExportExcelButton?.addEventListener('click', () => {
 });
 resetFiltersButton.addEventListener('click', resetFilterSelections);
 
+readUrlState();
 setupStickyTableHeader();
 applyLanguage();
 draw();
