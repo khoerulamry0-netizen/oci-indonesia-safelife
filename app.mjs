@@ -9,6 +9,15 @@ const translations = {
     batch_method_title: 'Estimasi per batch',
     fefo_rules_title: 'Aturan perhitungan FEFO',
     close_dialog: 'Mengerti',
+    refresh_data: 'Muat ulang data',
+    insight_channel_split: 'Porsi modal risiko · Online vs Offline',
+    insight_category_top: 'Top kategori penyumbang modal risiko',
+    insight_offline_status: 'Modal risiko · Active vs Inactive SKU',
+    insight_expiry_dist: 'Distribusi modal risiko per rentang ED',
+    insight_other: 'Lainnya',
+    bucket_le_90: '≤ 90 hari',
+    bucket_91_180: '91–180 hari',
+    bucket_gt_180: '> 180 hari',
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
     quick_at_risk: 'Berisiko',
@@ -184,6 +193,15 @@ const translations = {
     batch_method_title: 'Per-batch estimation',
     fefo_rules_title: 'FEFO calculation rules',
     close_dialog: 'Got it',
+    refresh_data: 'Refresh data',
+    insight_channel_split: 'Risk value share · Online vs Offline',
+    insight_category_top: 'Top risk value by SKU category',
+    insight_offline_status: 'Risk value · Active vs Inactive SKU',
+    insight_expiry_dist: 'Risk value by expiry horizon',
+    insight_other: 'Other',
+    bucket_le_90: '≤ 90 days',
+    bucket_91_180: '91–180 days',
+    bucket_gt_180: '> 180 days',
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
     quick_at_risk: 'At risk',
@@ -451,6 +469,11 @@ const exportExcelButton = getEl('export-excel');
 const mobileExportExcelButton = getEl('mobile-export-excel');
 const resetFiltersButton = getEl('reset-filters');
 const syncStatus = getEl('sync-status');
+const refreshButton = getEl('refresh-data');
+const riskRatioBar = getEl('risk-ratio-bar');
+const insightsStrip = getEl('insights-strip');
+const insightPrimary = getEl('insight-primary');
+const insightExpiry = getEl('insight-expiry');
 const activeChips = getEl('active-chips');
 const filterBackdrop = getEl('filter-backdrop');
 const filterCloseButton = getEl('filter-close');
@@ -490,6 +513,8 @@ const filterDescriptors = [
 ];
 
 let channel = 'Online';
+let sortKey = 'value';
+let sortDir = 'desc';
 let onlineReportsExpired = false;
 const mobileInventory = window.matchMedia('(max-width: 670px)');
 const stockCards = getEl('stock-cards');
@@ -725,7 +750,7 @@ function applyLanguage() {
   updateSkuCategoryOptions();
   updateSkuCategoryVisibility();
   updateSyncStatus();
-  refreshStickyHeaderClone();
+  applySortIndicators();
 }
 
 function updateSkuCategoryOptions() {
@@ -763,6 +788,48 @@ function updateSkuCategoryVisibility() {
   }
 }
 
+const defaultSortDir = {
+  name: 'asc',
+  days: 'asc',
+  stock: 'desc',
+  value: 'desc',
+  sales: 'desc',
+  cover: 'desc',
+  qty: 'desc',
+};
+
+function sortMetricValue(record, key) {
+  if (key === 'name') return String(record.name ?? '').trim();
+  if (key === 'stock') return Number.isFinite(record.stock) ? record.stock : null;
+  if (key === 'value') return pricedRiskValue(record);
+  if (key === 'sales') return Number.isFinite(record.averageMonthlySales) ? record.averageMonthlySales : null;
+  if (key === 'cover') return Number.isFinite(record.stockCoverDays) ? record.stockCoverDays : null;
+  if (key === 'days') return Number.isFinite(record.daysLeft) ? record.daysLeft : null;
+  if (key === 'qty') return Number.isFinite(record.risk) ? record.risk : null;
+  return null;
+}
+
+function applySortIndicators() {
+  const sourceHead = tableScroll?.querySelector('thead');
+  if (!sourceHead) return;
+  for (const th of sourceHead.querySelectorAll('th[data-sort]')) {
+    const active = th.dataset.sort === sortKey;
+    if (active) {
+      th.setAttribute('data-sort-dir', sortDir);
+      th.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+    } else {
+      th.removeAttribute('data-sort-dir');
+      th.removeAttribute('aria-sort');
+    }
+  }
+  const syncSelect = ['value', 'days', 'qty'].includes(sortKey) ? sortKey : '';
+  if (syncSelect) {
+    prioritySort.value = syncSelect;
+    if (mobilePrioritySort) mobilePrioritySort.value = syncSelect;
+  }
+  refreshStickyHeaderClone();
+}
+
 function visibleRecords() {
   const visible = filterPortfolio(records, channel, search.value)
     .filter(record => !riskFilter.value || (riskFilter.value === 'expired'
@@ -776,9 +843,18 @@ function visibleRecords() {
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
   return visible.sort((a, b) => {
-    if (prioritySort.value === 'days') return (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity);
-    if (prioritySort.value === 'qty') return (b.risk ?? -Infinity) - (a.risk ?? -Infinity);
-    return (pricedRiskValue(b) ?? -Infinity) - (pricedRiskValue(a) ?? -Infinity);
+    const av = sortMetricValue(a, sortKey);
+    const bv = sortMetricValue(b, sortKey);
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    let cmp;
+    if (sortKey === 'name') {
+      cmp = av.localeCompare(bv, locale === 'en' ? 'en' : 'id');
+    } else {
+      cmp = av - bv;
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
   });
 }
 
@@ -1096,9 +1172,132 @@ function renderActiveChips() {
 function resetFilterSelections() {
   search.value = '';
   for (const { select } of filterDescriptors) select.value = '';
+  sortKey = 'value';
+  sortDir = 'desc';
   prioritySort.value = 'value';
   if (mobilePrioritySort) mobilePrioritySort.value = 'value';
+  applySortIndicators();
   draw();
+}
+
+function renderInsightCard(container, title, totalValue, items) {
+  container.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'insight-head';
+  const heading = document.createElement('h3');
+  heading.className = 'insight-title';
+  heading.textContent = title;
+  const total = document.createElement('span');
+  total.className = 'insight-total';
+  total.textContent = compactRiskValue(totalValue);
+  head.append(heading, total);
+
+  const bar = document.createElement('div');
+  bar.className = 'insight-bar';
+  const legend = document.createElement('ul');
+  legend.className = 'insight-legend';
+
+  for (const item of items) {
+    if (!(item.value > 0)) continue;
+    const pct = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
+    const seg = document.createElement('span');
+    seg.className = 'insight-seg';
+    seg.style.width = pct.toFixed(2) + '%';
+    seg.style.backgroundColor = item.color;
+    seg.title = item.label + ': ' + compactRiskValue(item.value) + ' (' + percentNumber.format(pct) + '%)';
+    bar.append(seg);
+
+    const li = document.createElement('li');
+    const dot = document.createElement('span');
+    dot.className = 'insight-dot';
+    dot.style.backgroundColor = item.color;
+    const nameEl = document.createElement('span');
+    nameEl.textContent = item.label;
+    const valEl = document.createElement('strong');
+    valEl.textContent = compactRiskValue(item.value) + ' (' + percentNumber.format(pct) + '%)';
+    li.append(dot, nameEl, valEl);
+    legend.append(li);
+  }
+  container.append(head, bar, legend);
+}
+
+function renderInsights(visible, totalRiskValue) {
+  if (!visible.length || !(totalRiskValue > 0)) {
+    insightsStrip.hidden = true;
+    return;
+  }
+  insightsStrip.hidden = false;
+
+  if (channel === 'all') {
+    let onlineVal = 0;
+    let offlineVal = 0;
+    for (const r of visible) {
+      const rv = pricedRiskValue(r);
+      if (!Number.isFinite(rv) || rv <= 0) continue;
+      if (r.channel === 'Offline') offlineVal += rv;
+      else onlineVal += rv;
+    }
+    renderInsightCard(insightPrimary, t('insight_channel_split'), onlineVal + offlineVal, [
+      { label: t('online'), value: onlineVal, color: '#882653' },
+      { label: 'Offline', value: offlineVal, color: '#0284c7' },
+    ]);
+  } else if (channel === 'Offline') {
+    let activeVal = 0;
+    let inactiveVal = 0;
+    for (const r of visible) {
+      const rv = pricedRiskValue(r);
+      if (!Number.isFinite(rv) || rv <= 0) continue;
+      if (r.isActive) activeVal += rv;
+      else inactiveVal += rv;
+    }
+    renderInsightCard(insightPrimary, t('insight_offline_status'), activeVal + inactiveVal, [
+      { label: t('active_sku_only'), value: activeVal, color: '#882653' },
+      { label: t('inactive_sku_only'), value: inactiveVal, color: '#d97706' },
+    ]);
+  } else {
+    const byCat = new Map();
+    for (const r of visible) {
+      const rv = pricedRiskValue(r);
+      if (!Number.isFinite(rv) || rv <= 0) continue;
+      const cat = String(r.skuCategory || '').trim() || t('unmapped');
+      byCat.set(cat, (byCat.get(cat) ?? 0) + rv);
+    }
+    const sorted = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
+    const palette = ['#882653', '#0284c7', '#d97706', '#64748b'];
+    const top = sorted.slice(0, 3).map(([label, value], i) => ({ label, value, color: palette[i] }));
+    const otherSum = sorted.slice(3).reduce((acc, [, v]) => acc + v, 0);
+    if (otherSum > 0) top.push({ label: t('insight_other'), value: otherSum, color: palette[3] });
+    renderInsightCard(insightPrimary, t('insight_category_top'), totalRiskValue, top);
+  }
+
+  let le90 = 0;
+  let b91_180 = 0;
+  let gt180 = 0;
+  for (const r of visible) {
+    if (!Number.isFinite(r.productCost) || !(r.risk > 0)) continue;
+    let accounted = false;
+    for (const exp of r.expiries ?? []) {
+      if (exp.days >= 0 && Number.isFinite(exp.riskQty) && exp.riskQty > 0) {
+        const val = exp.riskQty * r.productCost;
+        if (exp.days <= 90) le90 += val;
+        else if (exp.days <= 180) b91_180 += val;
+        else gt180 += val;
+        accounted = true;
+      }
+    }
+    if (!accounted && Number.isFinite(r.daysLeft)) {
+      const val = r.risk * r.productCost;
+      if (r.daysLeft <= 90) le90 += val;
+      else if (r.daysLeft <= 180) b91_180 += val;
+      else gt180 += val;
+    }
+  }
+  const expTotal = le90 + b91_180 + gt180;
+  renderInsightCard(insightExpiry, t('insight_expiry_dist'), expTotal, [
+    { label: t('bucket_le_90'), value: le90, color: '#dc2626' },
+    { label: t('bucket_91_180'), value: b91_180, color: '#f59e0b' },
+    { label: t('bucket_gt_180'), value: gt180, color: '#882653' },
+  ]);
 }
 
 function draw() {
@@ -1128,6 +1327,10 @@ function draw() {
   setCardTone(statCards.risk, knownRisk.length > 0, totalRiskQty);
   setCardTone(statCards.value, pricedRisk.length > 0, totalRiskValue);
   setCardTone(statCards.riskRatio, riskRatioPct !== null, riskRatioPct);
+  riskRatioBar.style.width = riskRatioPct !== null
+    ? Math.min(100, Math.max(0, riskRatioPct)).toFixed(1) + '%'
+    : '0%';
+  renderInsights(visible, totalRiskValue);
 
   getEl('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
   updateQuickFilterCounts();
@@ -1276,13 +1479,48 @@ for (const { select } of filterDescriptors) {
 }
 
 prioritySort.addEventListener('change', () => {
+  sortKey = prioritySort.value;
+  sortDir = defaultSortDir[sortKey] ?? 'desc';
   if (mobilePrioritySort) mobilePrioritySort.value = prioritySort.value;
+  applySortIndicators();
   draw();
 });
 
 mobilePrioritySort?.addEventListener('change', () => {
+  sortKey = mobilePrioritySort.value;
+  sortDir = defaultSortDir[sortKey] ?? 'desc';
   prioritySort.value = mobilePrioritySort.value;
+  applySortIndicators();
   draw();
+});
+
+tableWrap?.addEventListener('click', event => {
+  const th = event.target.closest('th[data-sort]');
+  if (!th) return;
+  const key = th.dataset.sort;
+  if (sortKey === key) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey = key;
+    sortDir = defaultSortDir[key] ?? 'desc';
+  }
+  applySortIndicators();
+  draw();
+});
+
+refreshButton?.addEventListener('click', async () => {
+  if (refreshButton.disabled) return;
+  refreshButton.disabled = true;
+  refreshButton.classList.add('is-spinning');
+  offlineState = 'loading';
+  onlineState = 'loading';
+  updateSyncStatus();
+  try {
+    await Promise.all([refreshOffline(true), refreshOnline(true)]);
+  } finally {
+    refreshButton.classList.remove('is-spinning');
+    refreshButton.disabled = false;
+  }
 });
 
 mobileInventory.addEventListener('change', () => {
@@ -1305,9 +1543,9 @@ setupStickyTableHeader();
 applyLanguage();
 draw();
 
-async function refreshOffline() {
+async function refreshOffline(forceRefresh = false) {
   try {
-    const response = await fetch('/api/offline', { cache: 'no-store' });
+    const response = await fetch('/api/offline' + (forceRefresh ? '?refresh=1' : ''), { cache: 'no-store' });
     if (!response.ok) throw new Error('Offline sheet unavailable');
     const payload = await response.json();
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
@@ -1323,9 +1561,9 @@ async function refreshOffline() {
   mergeRecords();
 }
 
-async function refreshOnline() {
+async function refreshOnline(forceRefresh = false) {
   try {
-    const response = await fetch('/api/online', { cache: 'no-store' });
+    const response = await fetch('/api/online' + (forceRefresh ? '?refresh=1' : ''), { cache: 'no-store' });
     if (!response.ok) throw new Error('Feed unavailable');
     const rows = await response.json();
     const today = jakartaDay();

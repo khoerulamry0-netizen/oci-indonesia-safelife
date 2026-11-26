@@ -58,13 +58,15 @@ function send(res, status, body, type = 'text/plain; charset=utf-8', headers = {
 // - If a refresh fails, the last good payload is served (up to CACHE_MAX_STALE_MS).
 const cacheTtlMs = Number(process.env.CACHE_TTL_MS || 5 * 60 * 1000);
 const cacheMaxStaleMs = Number(process.env.CACHE_MAX_STALE_MS || 24 * 60 * 60 * 1000);
+const forceRefreshCooldownMs = 15 * 1000;
 const dataCache = new Map();
 
-async function cachedPayload(key, loader) {
+async function cachedPayload(key, loader, forceRefresh = false) {
   const entry = dataCache.get(key) ?? {};
   dataCache.set(key, entry);
   const now = Date.now();
-  if (entry.body && now - entry.fetchedAt < cacheTtlMs) {
+  const canForce = forceRefresh && (!entry.fetchedAt || now - entry.fetchedAt >= forceRefreshCooldownMs);
+  if (!canForce && entry.body && now - entry.fetchedAt < cacheTtlMs) {
     return { body: entry.body, fetchedAt: entry.fetchedAt, status: 'HIT' };
   }
   if (!entry.pending) {
@@ -90,9 +92,9 @@ async function cachedPayload(key, loader) {
   }
 }
 
-async function sendCached(res, key, loader, errorMessage) {
+async function sendCached(res, key, loader, errorMessage, forceRefresh = false) {
   try {
-    const { body, fetchedAt, status } = await cachedPayload(key, loader);
+    const { body, fetchedAt, status } = await cachedPayload(key, loader, forceRefresh);
     const extraHeaders = {
       'X-Cache': status,
       'X-Data-Fetched-At': new Date(fetchedAt).toISOString(),
@@ -432,12 +434,12 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   };
 }
 
-function offlineData(res) {
-  return sendCached(res, 'offline', loadOfflineData, 'Offline Google Sheets synchronization failed');
+function offlineData(res, forceRefresh = false) {
+  return sendCached(res, 'offline', loadOfflineData, 'Offline Google Sheets synchronization failed', forceRefresh);
 }
 
-function proxyOnline(res) {
-  return sendCached(res, 'online', loadOnlineData, 'Online data unavailable');
+function proxyOnline(res, forceRefresh = false) {
+  return sendCached(res, 'online', loadOnlineData, 'Online data unavailable', forceRefresh);
 }
 
 async function loadOfflineData() {
@@ -517,8 +519,9 @@ createServer((req, res) => {
   const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
   if (url.pathname === '/healthz') return send(res, 200, 'ok');
-  if (url.pathname === '/api/offline') return offlineData(res);
-  if (url.pathname === '/api/online') return proxyOnline(res);
+  const forceRefresh = url.searchParams.get('refresh') === '1';
+  if (url.pathname === '/api/offline') return offlineData(res, forceRefresh);
+  if (url.pathname === '/api/online') return proxyOnline(res, forceRefresh);
   return serveStatic(res, url.pathname);
 }).listen(port, '0.0.0.0', () => {
   console.log('OCI Safelife listening on ' + port);

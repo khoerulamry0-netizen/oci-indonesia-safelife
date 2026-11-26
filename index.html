@@ -29,6 +29,9 @@
       <div class="topbar-meta">
         <span class="source-pill" id="source-label">Google Sheets · Online</span>
         <span class="sync-pill" id="sync-status" aria-live="polite">Sinkronisasi data…</span>
+        <button type="button" id="refresh-data" class="icon-pill icon-pill-compact" aria-label="Muat ulang data" data-i18n-aria="refresh_data" title="Muat ulang data">
+          <svg class="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+        </button>
         <button type="button" id="method-open" class="icon-pill" aria-haspopup="dialog" aria-controls="method-dialog" aria-label="Metodologi" data-i18n-aria="method_short">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
           <span data-i18n="method_short">Metodologi</span>
@@ -86,8 +89,14 @@
       <article class="stat stat-risk-ratio" id="stat-card-risk-ratio">
         <span class="stat-label" data-i18n="risk_ratio">Persentase risiko</span>
         <strong class="stat-value" id="risk-ratio-count">—</strong>
+        <div class="ratio-bar" aria-hidden="true"><span class="ratio-bar-fill" id="risk-ratio-bar"></span></div>
         <small class="stat-sub" data-i18n="risk_over_stock">nilai risiko ÷ nilai stok</small>
       </article>
+    </section>
+
+    <section class="insights-strip" id="insights-strip" hidden aria-label="Distribusi risiko">
+      <article class="insight-card" id="insight-primary"></article>
+      <article class="insight-card" id="insight-expiry"></article>
     </section>
 
     <section class="inventory" aria-labelledby="inventory-title">
@@ -276,20 +285,20 @@
             <colgroup span="3"></colgroup>
             <thead>
               <tr>
-                <th scope="col" rowspan="2" class="col-product" data-i18n="product_sku_id">Produk / SKU ID</th>
-                <th scope="col" rowspan="2" class="numeric col-stock" data-i18n="available_stock">Stok<br>tersedia</th>
-                <th scope="col" rowspan="2" class="numeric col-risk-val" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th>
+                <th scope="col" rowspan="2" class="col-product is-sortable" data-sort="name" data-i18n="product_sku_id">Produk / SKU ID</th>
+                <th scope="col" rowspan="2" class="numeric col-stock is-sortable" data-sort="stock" data-i18n="available_stock">Stok<br>tersedia</th>
+                <th scope="col" rowspan="2" class="numeric col-risk-val is-sortable" data-sort="value" data-sort-dir="desc" aria-sort="descending" data-i18n="risk_value_idr">Nilai risiko expired<br>(Rp)</th>
                 <th scope="colgroup" colspan="3" class="group-header group-sales" data-i18n="average_sales">Rata-rata sales</th>
                 <th scope="colgroup" colspan="3" class="group-header group-cover">Stock cover</th>
-                <th scope="col" rowspan="2" class="col-expiry" data-i18n="expiry_date_qty">Expired date / qty</th>
-                <th scope="col" rowspan="2" class="numeric col-risk-qty" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th>
+                <th scope="col" rowspan="2" class="col-expiry is-sortable" data-sort="days" data-i18n="expiry_date_qty">Expired date / qty</th>
+                <th scope="col" rowspan="2" class="numeric col-risk-qty is-sortable" data-sort="qty" data-i18n="expired_risk_pcs">Risiko expired<br>(pcs)</th>
                 <th scope="col" rowspan="2" class="col-status" data-i18n="risk_status">Status risiko</th>
               </tr>
               <tr>
                 <th scope="col" class="numeric sub-sales group-start" data-i18n="day_unit">Hari</th>
                 <th scope="col" class="numeric sub-sales" data-i18n="week_unit">Minggu</th>
-                <th scope="col" class="numeric sub-sales" data-i18n="month_unit">Bulan</th>
-                <th scope="col" class="numeric sub-cover group-start" data-i18n="day_unit">Hari</th>
+                <th scope="col" class="numeric sub-sales is-sortable" data-sort="sales" data-i18n="month_unit">Bulan</th>
+                <th scope="col" class="numeric sub-cover group-start is-sortable" data-sort="cover" data-i18n="day_unit">Hari</th>
                 <th scope="col" class="numeric sub-cover" data-i18n="week_unit">Minggu</th>
                 <th scope="col" class="numeric sub-cover group-end" data-i18n="month_unit">Bulan</th>
               </tr>
