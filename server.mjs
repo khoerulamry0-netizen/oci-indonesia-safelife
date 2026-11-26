@@ -210,14 +210,6 @@ function parseIndonesianNumber(value) {
   return Number(normalizedText);
 }
 
-function normalizeParetoStatus(value, monthlyAvg = null) {
-  const norm = normalized(value);
-  if (norm === 'pareto 80%') return 'Pareto 80%';
-  if (norm === 'non pareto') return monthlyAvg === 0 ? 'Tidak ada penjualan' : 'Non Pareto';
-  if (norm === 'tidak ada penjualan') return 'Tidak ada penjualan';
-  return String(value ?? '').trim() || null;
-}
-
 function parsePercent(value) {
   const text = String(value ?? '').trim().replace(/%/g, '');
   if (!text || text === '-' || text === '—') return null;
@@ -350,7 +342,7 @@ function buildParetoMap(rows) {
   const rankIndex = columnIndex(header, 'Rank');
   const pareto = new Map();
   for (const row of rows.slice(headerIndex + 1)) {
-    const sku = String(row[skuIndex] ?? '').trim().toUpperCase();
+    const sku = skuKey(row[skuIndex]);
     if (!sku || pareto.has(sku)) continue;
     pareto.set(sku, {
       status: String(row[statusIndex] ?? '').trim() || null,
@@ -405,7 +397,6 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   const salesSku = columnIndex(salesHeader, 'SKU');
   const salesName = columnIndex(salesHeader, 'PRODUCT DESCRIPTION');
   const salesMonthlyAvg = columnIndex(salesHeader, 'Monthly AVG');
-  const salesPareto = columnIndex(salesHeader, 'PARETO');
   const salesSwcNote = columnIndex(salesHeader, 'SWC NOTE');
   const salesDataRows = salesRows.slice(salesHeaderIndex + 1).filter(row => String(row[salesSku] ?? '').trim());
   const monthColumns = latestFilledCompletedMonths(salesHeader, salesDataRows);
@@ -429,7 +420,6 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       name: String(row[salesName] ?? '').trim(),
       monthlySales: monthColumns.map(({ index }) => parseIndonesianNumber(row[index])),
       averageMonthlySales,
-      paretoStatus: salesPareto >= 0 ? normalizeParetoStatus(row[salesPareto], averageMonthlySales) : null,
       swcNote: salesSwcNote >= 0 ? String(row[salesSwcNote] ?? '').trim() || null : null,
     });
   }
@@ -454,7 +444,6 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       undatedStock: 0,
       monthlySales: salesInfo?.monthlySales ?? null,
       averageMonthlySales: salesInfo?.averageMonthlySales ?? null,
-      swcParetoStatus: salesInfo?.paretoStatus ?? null,
       swcNote: salesInfo?.swcNote ?? null,
     };
     if (!group.name) group.name = String(row[clusterName] ?? '').trim();
@@ -476,7 +465,6 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
         stock: group.stock,
         monthlySales: group.monthlySales ?? months.map(() => null),
         averageMonthlySales: group.averageMonthlySales,
-        swcParetoStatus: group.swcParetoStatus,
         swcNote: group.swcNote,
         undatedStock: group.undatedStock,
         expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
@@ -507,11 +495,10 @@ async function loadOfflineData() {
   const pareto = buildParetoMap(paretoRows);
   payload.records = payload.records.map(row => {
     const key = skuKey(row.sku);
-    const { swcParetoStatus, ...rest } = row;
     return {
-      ...rest,
+      ...row,
       productCost: costs.get(key) ?? null,
-      paretoStatus: swcParetoStatus ?? pareto.get(key)?.status ?? null,
+      paretoStatus: pareto.get(key)?.status ?? null,
       paretoContribution: pareto.get(key)?.contribution ?? null,
       paretoRank: pareto.get(key)?.rank ?? null,
     };
