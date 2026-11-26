@@ -9,12 +9,6 @@ const translations = {
     batch_method_title: 'Estimasi per batch',
     fefo_rules_title: 'Aturan perhitungan FEFO',
     close_dialog: 'Mengerti',
-    all_channels: 'Semua channel',
-    all_channels_source: 'Google Sheets · Online + Offline',
-    total_stock_value: 'Total nilai stok',
-    cost_times_stock: 'product cost × stok tersedia',
-    risk_value_ratio: 'Rasio risiko modal',
-    risk_ratio_detail: 'nilai risiko ÷ nilai stok',
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
     quick_ed_90: 'ED ≤ 90 hari',
@@ -186,12 +180,6 @@ const translations = {
     batch_method_title: 'Per-batch estimation',
     fefo_rules_title: 'FEFO calculation rules',
     close_dialog: 'Got it',
-    all_channels: 'All channels',
-    all_channels_source: 'Google Sheets · Online + Offline',
-    total_stock_value: 'Total stock value',
-    cost_times_stock: 'product cost × available stock',
-    risk_value_ratio: 'Risk-to-stock ratio',
-    risk_ratio_detail: 'risk value ÷ stock value',
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
     quick_ed_90: 'Expiry ≤ 90d',
@@ -806,7 +794,9 @@ function exportExcelFile() {
   const visible = visibleRecords();
   const columns = [
     t('product_sku'), 'SKU', t('channel'),
+    t('sku_category_filter'), t('sku_status_filter'),
     t('available_stock').replace('<br>', ' '),
+    t('total_stock_value'),
     t('risk_value_idr').replace('<br>', ' '),
     t('average_monthly_sales').replace('<br>', ' '),
     t('average_daily_sales').replace('<br>', ' '),
@@ -821,12 +811,19 @@ function exportExcelFile() {
   ];
   const rows = visible.map(record => {
     const riskValue = pricedRiskValue(record);
+    const stockValue = pricedStockValue(record);
     const [riskLabel] = statusOf(record);
+    const skuStatus = record.channel === 'Offline'
+      ? (record.isActive ? t('active_sku_only') : t('inactive_sku_only'))
+      : '—';
     return [
       record.name,
       record.sku,
       channelLabel(record.channel),
+      record.skuCategory || '—',
+      skuStatus,
       number.format(record.stock),
+      Number.isFinite(stockValue) ? formatRupiah(stockValue) : '—',
       Number.isFinite(riskValue) ? formatRupiah(riskValue) : '—',
       salesFormat(record.averageMonthlySales),
       salesFormat(record.averageDailySales),
@@ -1289,19 +1286,20 @@ async function refreshOnline() {
     const rows = await response.json();
     const today = jakartaDay();
     onlineRecords = rows.map(row => {
+      const effectiveDailySales = row.incomplete ? null : row.averageDailySales;
       const expiries = estimateExpiryRisk(row.expiries.map(expiry => {
         const parsedDate = new Date(expiry.date + 'T00:00:00Z');
         return { ...expiry, date: parsedDate, days: Math.round((parsedDate.getTime() - today) / 86_400_000) };
-      }), row.incomplete ? null : row.averageDailySales);
+      }), effectiveDailySales);
       const daysLeft = expiries.find(expiry => expiry.days >= 0)?.days ?? null;
       const expiredStock = expiries.reduce((total, expiry) => total + (expiry.days < 0 ? expiry.qty : 0), 0);
-      const stock = Number(row.stock) - expiredStock;
+      const stock = Math.max(0, Number(row.stock) - expiredStock);
       return {
         ...row, channel: 'Online', daysLeft, expiries, expiredStock, stock,
         incomplete: row.incomplete || (daysLeft !== null && row.averageDailySales == null),
         risk: riskWithin(expiries, Infinity),
         productCost: row.productCost == null ? null : Number(row.productCost),
-        stockCoverDays: row.averageDailySales > 0 ? stock / row.averageDailySales : null,
+        stockCoverDays: effectiveDailySales > 0 ? stock / effectiveDailySales : null,
       };
     });
     onlineReportsExpired = onlineRecords.some(record => record.expiredStock > 0);

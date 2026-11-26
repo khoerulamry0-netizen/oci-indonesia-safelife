@@ -25,7 +25,6 @@ const masterCostGid = '686994777';
 const onlineParetoGid = '1197311588';
 const onlineSkuCategorySheetName = 'SKU CATEGORY';
 const offlineParetoGid = '616754166';
-const spreadsheetExport = 'https://docs.google.com/spreadsheets/d/' + spreadsheetId + '/export?format=csv&gid=';
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -50,7 +49,7 @@ function send(res, status, body, type = 'text/plain; charset=utf-8', headers = {
     ...securityHeaders,
     ...headers,
   });
-  res.end(body);
+  res.end(res.req?.method === 'HEAD' ? undefined : body);
 }
 
 // In-memory cache for Google Sheets-backed payloads.
@@ -150,6 +149,10 @@ function normalized(value) {
   return String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function skuKey(value) {
+  return String(value ?? '').trim().toUpperCase();
+}
+
 function findHeader(rows, required) {
   return rows.findIndex(row => required.every(name => row.some(value => normalized(value) === normalized(name))));
 }
@@ -162,10 +165,23 @@ function parseNumber(value) {
   const text = String(value ?? '').trim();
   if (!text || text === '-' || text === '—') return 0;
   const normalizedText = text.replace(/\s/g, '');
-  if (normalizedText.includes(',') && normalizedText.includes('.')) {
-    return Number(normalizedText.replace(/\./g, '').replace(',', '.'));
+  const hasComma = normalizedText.includes(',');
+  const hasDot = normalizedText.includes('.');
+  if (hasComma && hasDot) {
+    // Whichever separator appears last is the decimal separator.
+    return normalizedText.lastIndexOf(',') > normalizedText.lastIndexOf('.')
+      ? Number(normalizedText.replace(/\./g, '').replace(',', '.'))
+      : Number(normalizedText.replace(/,/g, ''));
   }
-  if (normalizedText.includes(',')) return Number(normalizedText.replace(',', '.'));
+  if (hasComma) {
+    if (/^-?\d{1,3}(,\d{3})+$/.test(normalizedText)) {
+      return Number(normalizedText.replace(/,/g, ''));
+    }
+    return Number(normalizedText.replace(',', '.'));
+  }
+  if (hasDot && /^-?\d{1,3}(\.\d{3}){2,}$/.test(normalizedText)) {
+    return Number(normalizedText.replace(/\./g, ''));
+  }
   return Number(normalizedText);
 }
 
@@ -234,8 +250,9 @@ async function fetchSheetCsv(sheetName, sourceSpreadsheetId = onlineSpreadsheetI
 
 function parseRupiah(value) {
   const text = String(value ?? '').trim();
-  if (!text || text === '-' || text === '—') return 0;
+  if (!text || text === '-' || text === '—') return null;
   const digits = text.replace(/[^\d-]/g, '');
+  if (!digits || digits === '-') return null;
   const number = Number(digits);
   return Number.isFinite(number) ? number : null;
 }
@@ -248,7 +265,7 @@ function buildMasterCostMap(rows) {
   const costIndex = columnIndex(header, 'Product Cost (Rp)');
   const costs = new Map();
   for (const row of rows.slice(headerIndex + 1)) {
-    const sku = String(row[skuIndex] ?? '').trim();
+    const sku = skuKey(row[skuIndex]);
     if (!sku || costs.has(sku)) continue;
     const cost = parseRupiah(row[costIndex]);
     if (cost !== null) costs.set(sku, cost);
@@ -282,7 +299,7 @@ function buildOnlineAverageMap(rows) {
   const weeklyIndex = columnIndex(header, 'Avg / minggu (pcs)');
   const averages = new Map();
   for (const row of rows.slice(headerIndex + 1)) {
-    const sku = String(row[skuIndex] ?? '').trim();
+    const sku = skuKey(row[skuIndex]);
     if (!sku || averages.has(sku)) continue;
     const weekly = parseNumber(row[weeklyIndex]);
     if (Number.isFinite(weekly) && weekly >= 0) averages.set(sku, weekly);
@@ -362,7 +379,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   }
   const salesBySku = new Map();
   for (const row of salesDataRows) {
-    const sku = String(row[salesSku] ?? '').trim();
+    const sku = skuKey(row[salesSku]);
     if (!sku || salesBySku.has(sku)) continue;
     salesBySku.set(sku, {
       name: String(row[salesName] ?? '').trim(),
@@ -375,39 +392,43 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   const grouped = new Map();
   for (const row of clusteringRows.slice(clusterHeaderIndex + 1)) {
     const sku = String(row[clusterSku] ?? '').trim();
-    if (!sku) continue;
+    const key = skuKey(sku);
+    if (!key) continue;
     if (normalized(row[clusterStatus]) === 'damage') continue;
     const qty = parseNumber(row[clusterAvailable]);
     if (!Number.isFinite(qty) || qty <= 0) continue;
-    const group = grouped.get(sku) ?? {
+    const group = grouped.get(key) ?? {
       sku,
       name: String(row[clusterName] ?? '').trim(),
       channel: 'Offline',
       stock: 0,
       expiries: new Map(),
       undatedStock: 0,
-      monthlySales: salesBySku.get(sku)?.monthlySales ?? null,
+      monthlySales: salesBySku.get(key)?.monthlySales ?? null,
     };
     if (!group.name) group.name = String(row[clusterName] ?? '').trim();
     group.stock += qty;
     const expiry = parseExpiry(row[clusterExpiry]);
     if (expiry) group.expiries.set(expiry, (group.expiries.get(expiry) ?? 0) + qty);
     else group.undatedStock += qty;
-    grouped.set(sku, group);
+    grouped.set(key, group);
   }
   if (!grouped.size) throw new Error('Clustering Offline returned no usable stock rows');
   return {
     salesMonths: months,
-    records: [...grouped.values()].map(group => ({
-      sku: group.sku,
-      name: group.name || salesBySku.get(group.sku)?.name || group.sku,
-      channel: group.channel,
-      stock: group.stock,
-      monthlySales: group.monthlySales ?? months.map(() => null),
-      undatedStock: group.undatedStock,
-      expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
-      isActive: activeSkuMap.get(String(group.sku ?? '').trim().toUpperCase()) ?? false,
-    })),
+    records: [...grouped.values()].map(group => {
+      const key = skuKey(group.sku);
+      return {
+        sku: group.sku,
+        name: group.name || salesBySku.get(key)?.name || group.sku,
+        channel: group.channel,
+        stock: group.stock,
+        monthlySales: group.monthlySales ?? months.map(() => null),
+        undatedStock: group.undatedStock,
+        expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
+        isActive: activeSkuMap.get(key) ?? false,
+      };
+    }),
   };
 }
 
@@ -430,13 +451,16 @@ async function loadOfflineData() {
   const payload = buildOfflineRecords(clusteringRows, salesRows, activeSkuRows);
   const costs = buildMasterCostMap(costRows);
   const pareto = buildParetoMap(paretoRows);
-  payload.records = payload.records.map(row => ({
-    ...row,
-    productCost: costs.get(row.sku) ?? null,
-    paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
-    paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
-    paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
-  }));
+  payload.records = payload.records.map(row => {
+    const key = skuKey(row.sku);
+    return {
+      ...row,
+      productCost: costs.get(key) ?? null,
+      paretoStatus: pareto.get(key)?.status ?? null,
+      paretoContribution: pareto.get(key)?.contribution ?? null,
+      paretoRank: pareto.get(key)?.rank ?? null,
+    };
+  });
   return payload;
 }
 
@@ -455,20 +479,21 @@ async function loadOnlineData() {
   const averages = buildOnlineAverageMap(summaryRows);
   const pareto = buildParetoMap(paretoRows);
   const skuCategories = buildSkuCategoryMap(categoryRows);
-  const enriched = rows.map(row => ({
-    ...row,
-    productCost: costs.get(String(row.sku ?? '').trim()) ?? null,
-    skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
-    averageWeeklySales: averages.has(String(row.sku ?? '').trim())
-      ? averages.get(String(row.sku ?? '').trim()) : null,
-    averageDailySales: averages.has(String(row.sku ?? '').trim())
-      ? averages.get(String(row.sku ?? '').trim()) / 7 : null,
-    averageMonthlySales: averages.has(String(row.sku ?? '').trim())
-      ? averages.get(String(row.sku ?? '').trim()) * 52 / 12 : null,
-    paretoStatus: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.status ?? null,
-    paretoContribution: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.contribution ?? null,
-    paretoRank: pareto.get(String(row.sku ?? '').trim().toUpperCase())?.rank ?? null,
-  }));
+  const enriched = rows.map(row => {
+    const key = skuKey(row.sku);
+    const weekly = averages.has(key) ? averages.get(key) : null;
+    return {
+      ...row,
+      productCost: costs.get(key) ?? null,
+      skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
+      averageWeeklySales: weekly,
+      averageDailySales: weekly !== null ? weekly / 7 : null,
+      averageMonthlySales: weekly !== null ? weekly * 52 / 12 : null,
+      paretoStatus: pareto.get(key)?.status ?? null,
+      paretoContribution: pareto.get(key)?.contribution ?? null,
+      paretoRank: pareto.get(key)?.rank ?? null,
+    };
+  });
   return enriched;
 }
 
