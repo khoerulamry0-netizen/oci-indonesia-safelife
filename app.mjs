@@ -69,7 +69,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
-    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.',
+    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
     search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
@@ -107,6 +107,14 @@ const translations = {
     active_sku_only: 'Active SKU',
     inactive_sku_only: 'Inactive SKU',
     inactive_tag: 'Inactive',
+    oos_filter: 'OOS Filter',
+    oos_available_only: 'Stok tersedia (default)',
+    oos_only: 'OOS (Stok habis)',
+    oos_all: 'Semua (Tersedia + OOS)',
+    oos_status: 'Stok habis (OOS)',
+    oos_tag: 'OOS',
+    swc_note_filter: 'SWC Note',
+    all_swc_notes: 'Semua SWC Note',
     stale_suffix: ' · Data lama (sinkronisasi gagal)',
     cover_0_30: '≤ 30 hari',
     cover_31_90: '31–90 hari',
@@ -253,7 +261,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
-    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, Monthly AVG from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, and Active/Inactive SKU status. Cost for both channels is mapped from the Master Cost tab.',
+    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, and Active/Inactive SKU status. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
     search_placeholder: 'Search SKU or product name…',
     online: 'Online',
@@ -291,6 +299,14 @@ const translations = {
     active_sku_only: 'Active SKU',
     inactive_sku_only: 'Inactive SKU',
     inactive_tag: 'Inactive',
+    oos_filter: 'OOS Filter',
+    oos_available_only: 'Stock available (default)',
+    oos_only: 'OOS (Out of stock)',
+    oos_all: 'All (Available + OOS)',
+    oos_status: 'Out of stock (OOS)',
+    oos_tag: 'OOS',
+    swc_note_filter: 'SWC Note',
+    all_swc_notes: 'All SWC notes',
     stale_suffix: ' · Stale data (sync failed)',
     cover_0_30: '≤ 30 days',
     cover_31_90: '31–90 days',
@@ -460,6 +476,10 @@ const skuCategoryPicker = getEl('sku-category-picker');
 const skuCategoryFilter = getEl('sku-category-filter');
 const skuStatusPicker = getEl('sku-status-picker');
 const skuStatusFilter = getEl('sku-status-filter');
+const oosFilterPicker = getEl('oos-filter-picker');
+const oosFilter = getEl('oos-filter');
+const swcNotePicker = getEl('swc-note-picker');
+const swcNoteFilter = getEl('swc-note-filter');
 const riskValueFilter = getEl('risk-value-filter');
 const salesVelocityFilter = getEl('sales-velocity-filter');
 const prioritySort = getEl('priority-sort');
@@ -507,6 +527,8 @@ const filterDescriptors = [
   { select: stockCoverFilter, labelKey: 'stock_cover_filter' },
   { select: skuCategoryFilter, labelKey: 'sku_category_filter' },
   { select: skuStatusFilter, labelKey: 'sku_status_filter' },
+  { select: oosFilter, labelKey: 'oos_filter' },
+  { select: swcNoteFilter, labelKey: 'swc_note_filter' },
   { select: riskValueFilter, labelKey: 'risk_value_filter' },
   { select: salesVelocityFilter, labelKey: 'sales_velocity' },
   { select: paretoFilter, labelKey: 'pareto' },
@@ -611,6 +633,7 @@ function cell(row, value, className = '') {
 }
 
 function statusOf(record) {
+  if (record.channel === 'Offline' && record.oosFilter === 'OOS' && record.stock === 0) return [t('oos_status'), 'oos'];
   if (record.daysLeft === null && record.expiredStock > 0) return [t('expired_stock'), 'expired'];
   if (record.incomplete) return [t('incomplete_sales'), 'missing'];
   if (record.daysLeft === null) return [t('no_expiry_status'), 'no-date'];
@@ -748,6 +771,7 @@ function applyLanguage() {
   languageButtons.id.setAttribute('aria-pressed', String(locale === 'id'));
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
   updateSkuCategoryOptions();
+  updateSwcNoteOptions();
   updateSkuCategoryVisibility();
   updateSyncStatus();
   applySortIndicators();
@@ -773,6 +797,26 @@ function updateSkuCategoryOptions() {
   skuCategoryFilter.value = categories.includes(selected) ? selected : '';
 }
 
+function updateSwcNoteOptions() {
+  const selected = swcNoteFilter.value;
+  const notes = [...new Set(offlineRecords
+    .map(record => String(record.swcNote ?? '').trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, locale === 'en' ? 'en' : 'id', { numeric: true }));
+  swcNoteFilter.replaceChildren();
+  const allOption = document.createElement('option');
+  allOption.value = '';
+  allOption.textContent = t('all_swc_notes');
+  swcNoteFilter.append(allOption);
+  for (const note of notes) {
+    const option = document.createElement('option');
+    option.value = note;
+    option.textContent = note;
+    swcNoteFilter.append(option);
+  }
+  swcNoteFilter.value = notes.includes(selected) ? selected : '';
+}
+
 function updateSkuCategoryVisibility() {
   const showCategory = channel !== 'Offline';
   skuCategoryPicker.hidden = !showCategory;
@@ -781,6 +825,10 @@ function updateSkuCategoryVisibility() {
   const isOffline = channel === 'Offline';
   skuStatusPicker.hidden = !isOffline;
   skuStatusFilter.disabled = !isOffline;
+  oosFilterPicker.hidden = !isOffline;
+  oosFilter.disabled = !isOffline;
+  swcNotePicker.hidden = !isOffline;
+  swcNoteFilter.disabled = !isOffline;
   for (const btn of quickButtons) {
     const mode = btn.dataset.quick;
     if (mode === 'active' || mode === 'inactive') btn.hidden = !isOffline;
@@ -830,8 +878,17 @@ function applySortIndicators() {
   refreshStickyHeaderClone();
 }
 
+function matchesOosScope(record) {
+  if (record.channel !== 'Offline') return true;
+  if (channel !== 'Offline') return record.oosFilter !== 'OOS';
+  if (oosFilter.value === 'OOS') return record.oosFilter === 'OOS';
+  if (oosFilter.value === 'ALL') return true;
+  return record.oosFilter !== 'OOS';
+}
+
 function visibleRecords() {
   const visible = filterPortfolio(records, channel, search.value)
+    .filter(matchesOosScope)
     .filter(record => !riskFilter.value || (riskFilter.value === 'expired'
       ? record.expiredStock > 0 : statusOf(record)[1] === riskFilter.value))
     .filter(record => !urgencyFilter.value || riskWithin(record.expiries, Number(urgencyFilter.value)) > 0)
@@ -839,6 +896,7 @@ function visibleRecords() {
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel === 'Offline' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
     .filter(record => channel !== 'Offline' || !skuStatusFilter.value || record.isActive === (skuStatusFilter.value === 'active'))
+    .filter(record => channel !== 'Offline' || !swcNoteFilter.value || record.swcNote === swcNoteFilter.value)
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -878,7 +936,7 @@ function exportExcelFile() {
   const visible = visibleRecords();
   const columns = [
     t('product_sku'), 'SKU', t('channel'),
-    t('sku_category_filter'), t('sku_status_filter'),
+    t('sku_category_filter'), t('sku_status_filter'), t('oos_filter'), t('swc_note_filter'),
     t('available_stock').replace('<br>', ' '),
     t('total_stock_value'),
     t('risk_value_idr').replace('<br>', ' '),
@@ -906,6 +964,8 @@ function exportExcelFile() {
       channelLabel(record.channel),
       record.skuCategory || '—',
       skuStatus,
+      record.channel === 'Offline' ? (record.oosFilter || '—') : '—',
+      record.channel === 'Offline' ? (record.swcNote || '—') : '—',
       number.format(record.stock),
       Number.isFinite(stockValue) ? formatRupiah(stockValue) : '—',
       Number.isFinite(riskValue) ? formatRupiah(riskValue) : '—',
@@ -1018,6 +1078,18 @@ function buildProductMeta(record) {
     tag.textContent = t('inactive_tag');
     meta.append(tag);
   }
+  if (record.channel === 'Offline' && record.oosFilter === 'OOS') {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-oos';
+    tag.textContent = t('oos_tag');
+    meta.append(tag);
+  }
+  if (record.channel === 'Offline' && record.swcNote) {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-swc';
+    tag.textContent = record.swcNote;
+    meta.append(tag);
+  }
   return meta;
 }
 
@@ -1087,7 +1159,7 @@ function setCardTone(card, available, numericValue) {
 }
 
 function updateQuickFilterCounts() {
-  const base = filterPortfolio(records, channel, search.value);
+  const base = filterPortfolio(records, channel, search.value).filter(matchesOosScope);
   const counts = {
     all: base.length,
     'at-risk': base.filter(record => statusOf(record)[1] === 'at-risk').length,
@@ -1119,7 +1191,7 @@ window.addEventListener('resize', syncQuickFilterFade);
 function syncQuickFilterPills() {
   const activeQuick = (() => {
     const anyExtra = Boolean(urgencyFilter.value || stockCoverFilter.value || skuCategoryFilter.value
-      || riskValueFilter.value || salesVelocityFilter.value);
+      || oosFilter.value || swcNoteFilter.value || riskValueFilter.value || salesVelocityFilter.value);
     if (anyExtra) return null;
     if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'all';
     if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'at-risk';
@@ -1414,7 +1486,11 @@ for (const button of filterButtons) {
   button.addEventListener('click', () => {
     channel = button.dataset.channel;
     if (channel === 'Offline') skuCategoryFilter.value = '';
-    if (channel !== 'Offline') skuStatusFilter.value = '';
+    if (channel !== 'Offline') {
+      skuStatusFilter.value = '';
+      oosFilter.value = '';
+      swcNoteFilter.value = '';
+    }
     for (const item of filterButtons) item.setAttribute('aria-pressed', String(item === button));
     updateSkuCategoryVisibility();
     draw();
@@ -1550,6 +1626,7 @@ async function refreshOffline(forceRefresh = false) {
     const payload = await response.json();
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
     offlineRecords = portfolio(payload.records);
+    updateSwcNoteOptions();
     recordSyncTime('offline', response);
     offlineState = 'ready';
   } catch (error) {

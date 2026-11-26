@@ -1334,6 +1334,18 @@ tbody tr:hover td.cover-cell {
   border: 1px solid var(--warn-border);
 }
 
+.meta-tag-oos {
+  color: var(--danger-700);
+  background: var(--danger-50);
+  border: 1px solid var(--danger-border);
+}
+
+.meta-tag-swc {
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+}
+
 .meta-tag-online {
   color: #0369a1;
   background: #e0f2fe;
@@ -1452,6 +1464,12 @@ tbody tr:hover td.cover-cell {
   color: var(--muted);
   background: var(--surface-muted);
   border-color: var(--border);
+}
+
+.status.oos {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .empty {

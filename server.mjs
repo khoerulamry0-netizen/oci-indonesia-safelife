@@ -397,6 +397,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   const salesSku = columnIndex(salesHeader, 'SKU');
   const salesName = columnIndex(salesHeader, 'PRODUCT DESCRIPTION');
   const salesMonthlyAvg = columnIndex(salesHeader, 'Monthly AVG');
+  const salesOosFilter = columnIndex(salesHeader, 'OOS FILTER');
   const salesSwcNote = columnIndex(salesHeader, 'SWC NOTE');
   const salesDataRows = salesRows.slice(salesHeaderIndex + 1).filter(row => String(row[salesSku] ?? '').trim());
   const monthColumns = latestFilledCompletedMonths(salesHeader, salesDataRows);
@@ -406,7 +407,8 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
   }
   const salesBySku = new Map();
   for (const row of salesDataRows) {
-    const sku = skuKey(row[salesSku]);
+    const rawSku = String(row[salesSku] ?? '').trim();
+    const sku = skuKey(rawSku);
     if (!sku || salesBySku.has(sku)) continue;
     let averageMonthlySales = null;
     if (salesMonthlyAvg >= 0) {
@@ -417,9 +419,11 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       }
     }
     salesBySku.set(sku, {
+      sku: rawSku,
       name: String(row[salesName] ?? '').trim(),
       monthlySales: monthColumns.map(({ index }) => parseIndonesianNumber(row[index])),
       averageMonthlySales,
+      oosFilter: salesOosFilter >= 0 ? String(row[salesOosFilter] ?? '').trim() || null : null,
       swcNote: salesSwcNote >= 0 ? String(row[salesSwcNote] ?? '').trim() || null : null,
     });
   }
@@ -444,6 +448,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       undatedStock: 0,
       monthlySales: salesInfo?.monthlySales ?? null,
       averageMonthlySales: salesInfo?.averageMonthlySales ?? null,
+      oosFilter: normalized(salesInfo?.oosFilter) === 'oos' ? 'OOS' : 'STOCK AVAILABLE',
       swcNote: salesInfo?.swcNote ?? null,
     };
     if (!group.name) group.name = String(row[clusterName] ?? '').trim();
@@ -454,23 +459,42 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
     grouped.set(key, group);
   }
   if (!grouped.size) throw new Error('Clustering Offline returned no usable stock rows');
+  const stockedRecords = [...grouped.values()].map(group => {
+    const key = skuKey(group.sku);
+    return {
+      sku: group.sku,
+      name: group.name || salesBySku.get(key)?.name || group.sku,
+      channel: group.channel,
+      stock: group.stock,
+      monthlySales: group.monthlySales ?? months.map(() => null),
+      averageMonthlySales: group.averageMonthlySales,
+      oosFilter: group.oosFilter,
+      swcNote: group.swcNote,
+      undatedStock: group.undatedStock,
+      expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
+      isActive: activeSkuMap.get(key) ?? false,
+    };
+  });
+  const oosRecords = [];
+  for (const [key, salesInfo] of salesBySku) {
+    if (grouped.has(key)) continue;
+    oosRecords.push({
+      sku: salesInfo.sku,
+      name: salesInfo.name || salesInfo.sku,
+      channel: 'Offline',
+      stock: 0,
+      monthlySales: salesInfo.monthlySales ?? months.map(() => null),
+      averageMonthlySales: salesInfo.averageMonthlySales,
+      oosFilter: 'OOS',
+      swcNote: salesInfo.swcNote,
+      undatedStock: 0,
+      expiries: [],
+      isActive: activeSkuMap.get(key) ?? false,
+    });
+  }
   return {
     salesMonths: months,
-    records: [...grouped.values()].map(group => {
-      const key = skuKey(group.sku);
-      return {
-        sku: group.sku,
-        name: group.name || salesBySku.get(key)?.name || group.sku,
-        channel: group.channel,
-        stock: group.stock,
-        monthlySales: group.monthlySales ?? months.map(() => null),
-        averageMonthlySales: group.averageMonthlySales,
-        swcNote: group.swcNote,
-        undatedStock: group.undatedStock,
-        expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
-        isActive: activeSkuMap.get(key) ?? false,
-      };
-    }),
+    records: [...stockedRecords, ...oosRecords],
   };
 }
 
