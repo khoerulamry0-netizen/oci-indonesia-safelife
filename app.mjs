@@ -1024,6 +1024,10 @@ function updateSwcNoteOptions() {
   }
 }
 
+function isSubjectToProvision(status) {
+  return String(status ?? '').trim().toLowerCase().startsWith('kena provisi');
+}
+
 function updateProvisionFilterOptions() {
   const selected = pendingProvision || provisionFilter.value;
   const statuses = [...new Set(offlineRecords
@@ -1038,7 +1042,7 @@ function updateProvisionFilterOptions() {
     provisionFilter.append(option);
   };
   addOpt('', t('all_provisions'));
-  if (statuses.some(s => s.toLowerCase().includes('kena provisi'))) {
+  if (statuses.some(isSubjectToProvision)) {
     addOpt('__KENA_PROVISI__', t('provision_all_hit'));
   }
   for (const status of statuses) addOpt(status, status);
@@ -1140,7 +1144,7 @@ function visibleRecords() {
     .filter(record => {
       if (channel !== 'Offline' || !provisionFilter.value) return true;
       if (provisionFilter.value === '__KENA_PROVISI__') {
-        return String(record.provisionStatus ?? '').toLowerCase().includes('kena provisi');
+        return isSubjectToProvision(record.provisionStatus);
       }
       return record.provisionStatus === provisionFilter.value;
     })
