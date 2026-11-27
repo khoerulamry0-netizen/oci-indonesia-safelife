@@ -715,7 +715,7 @@ async function loadOfflineData() {
   payload.records = payload.records.map(row => {
     const key = skuKey(row.sku);
     const paretoEntry = pareto.get(key);
-    const fc = forecast.map.get(key);
+    const fc = row.isActive === true ? forecast.map.get(key) : null;
     const hasUrgentExpiry = (row.expiries ?? []).some(exp => {
       const ms = Date.parse(exp.date + 'T00:00:00Z');
       if (!Number.isFinite(ms)) return false;
