@@ -103,6 +103,27 @@
       <article class="insight-card" id="insight-expiry"></article>
     </section>
 
+    <section class="forecast-strip" id="forecast-strip" hidden aria-label="Ringkasan Additional Qty Forecast">
+      <div class="forecast-strip-head">
+        <span class="forecast-strip-title" data-i18n="forecast_strip_title">Additional Qty Forecast · Offline</span>
+        <span class="forecast-params" id="forecast-params"></span>
+      </div>
+      <div class="forecast-metrics">
+        <button type="button" class="forecast-metric" id="fc-order-now">
+          <span class="forecast-metric-label" data-i18n="fc_order_now_label">Perlu order (ORDER NOW)</span>
+          <strong class="forecast-metric-value is-order" id="fc-order-count">0 SKU</strong>
+        </button>
+        <button type="button" class="forecast-metric" id="fc-total-qty">
+          <span class="forecast-metric-label" data-i18n="fc_total_qty_label">Total Additional Qty</span>
+          <strong class="forecast-metric-value is-qty" id="fc-qty-value">0 pcs</strong>
+        </button>
+        <button type="button" class="forecast-metric" id="fc-overstock">
+          <span class="forecast-metric-label" data-i18n="fc_overstock_label">Overstock (&gt; Max Level)</span>
+          <strong class="forecast-metric-value is-overstock" id="fc-overstock-count">0 SKU</strong>
+        </button>
+      </div>
+    </section>
+
     <section class="inventory" aria-labelledby="inventory-title">
       <h2 id="inventory-title" class="sr-only" data-i18n="inventory_title">Daftar stok</h2>
 
@@ -136,6 +157,7 @@
                 <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
                 <option value="days" data-i18n="sort_days">ED terdekat</option>
                 <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
+                <option value="forecast" data-i18n="sort_forecast" hidden disabled>Additional qty terbesar</option>
               </select>
             </label>
 
@@ -254,6 +276,17 @@
               </select>
             </label>
 
+            <label id="forecast-status-picker" class="filter-field" hidden>
+              <span data-i18n="forecast_status_filter">Status Forecast</span>
+              <select id="forecast-status-filter" disabled>
+                <option value="" data-i18n="all_forecast_status">Semua status forecast</option>
+                <option value="ORDER NOW" data-i18n="fc_order_now">Order Now (Perlu restock)</option>
+                <option value="NEAR MIN" data-i18n="fc_near_min">Near Min</option>
+                <option value="OK" data-i18n="fc_ok">OK</option>
+                <option value="OVERSTOCK" data-i18n="fc_overstock">Overstock</option>
+              </select>
+            </label>
+
             <label class="filter-field">
               <span data-i18n="risk_value_filter">Nilai risiko</span>
               <select id="risk-value-filter">
@@ -293,6 +326,7 @@
                 <option value="value" data-i18n="sort_value">Modal risiko terbesar</option>
                 <option value="days" data-i18n="sort_days">ED terdekat</option>
                 <option value="qty" data-i18n="sort_qty">Qty risiko terbesar</option>
+                <option value="forecast" data-i18n="sort_forecast" hidden disabled>Additional qty terbesar</option>
               </select>
             </label>
           </div>
@@ -352,7 +386,7 @@
     </section>
 
     <footer class="page-footer">
-      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta Status Barang &amp; Provisi dari tab Active SKU offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
+      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang &amp; Provisi dari tab Active SKU offline, serta rencana restock dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
       <button type="button" id="method-open-footer" class="footer-link" data-i18n="method_title">Cara estimasi risiko expired</button>
     </footer>
   </main>
@@ -371,7 +405,7 @@
       <div class="dialog-body">
         <div class="method-block">
           <h3 data-i18n="data_sources_title">Sumber data</h3>
-          <p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta Status Barang &amp; Provisi dari tab Active SKU offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
+          <p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang &amp; Provisi dari tab Active SKU offline, serta rencana restock dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
         </div>
         <div class="method-block">
           <h3 data-i18n="batch_method_title">Estimasi per batch</h3>

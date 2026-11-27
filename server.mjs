@@ -25,6 +25,7 @@ const masterCostGid = '686994777';
 const onlineParetoGid = '1197311588';
 const onlineSkuCategorySheetName = 'SKU CATEGORY';
 const offlineParetoGid = '616754166';
+const offlineForecastGid = '2026112701'; // Tab "Additional Qty Forecast offline"
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -380,6 +381,64 @@ function buildParetoMap(rows) {
   return pareto;
 }
 
+function buildOfflineForecastMap(rows) {
+  let headerIndex = findHeader(rows, ['SKU ID', 'Additional Qty Forecast']);
+  let skuColName = 'SKU ID';
+  if (headerIndex < 0) {
+    headerIndex = findHeader(rows, ['SKU', 'Additional Qty Forecast']);
+    skuColName = 'SKU';
+  }
+  if (headerIndex < 0) throw new Error('Additional Qty Forecast offline headers not found');
+
+  const params = {
+    leadTimeDays: null,
+    safetyStockDays: null,
+    minStockDays: null,
+    maxStockDays: null,
+  };
+  for (const row of rows.slice(0, headerIndex)) {
+    const label = normalized(row[0]);
+    const val = parseOptionalNumber(row[1]);
+    if (val === null) continue;
+    if (label === 'lead time (hari)') params.leadTimeDays = val;
+    else if (label === 'safety stock (hari)') params.safetyStockDays = val;
+    else if (label === 'min stock level (hari)') params.minStockDays = val;
+    else if (label === 'max stock level (hari)') params.maxStockDays = val;
+  }
+
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, skuColName);
+  const ltdIndex = columnIndex(header, 'Lead Time Demand');
+  const ssIndex = columnIndex(header, 'Safety Stock');
+  const minIndex = columnIndex(header, 'Min Stock Level');
+  const maxIndex = columnIndex(header, 'Max Stock Level');
+  const ropIndex = columnIndex(header, 'Reorder Point');
+  const addQtyIndex = columnIndex(header, 'Additional Qty Forecast');
+  const statusIndex = columnIndex(header, 'Status Stok');
+  const qtyPerCtnIndex = columnIndex(header, 'Qty / CTN (Pcs)');
+  const addCtnIndex = columnIndex(header, 'Additional Qty (CTN)');
+
+  const map = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = skuKey(row[skuIndex]);
+    if (!sku || map.has(sku)) continue;
+    const rawStatus = statusIndex >= 0 ? String(row[statusIndex] ?? '').trim() : '';
+    map.set(sku, {
+      leadTimeDemand: ltdIndex >= 0 ? parseOptionalNumber(row[ltdIndex]) : null,
+      safetyStock: ssIndex >= 0 ? parseOptionalNumber(row[ssIndex]) : null,
+      minStockLevel: minIndex >= 0 ? parseOptionalNumber(row[minIndex]) : null,
+      maxStockLevel: maxIndex >= 0 ? parseOptionalNumber(row[maxIndex]) : null,
+      reorderPoint: ropIndex >= 0 ? parseOptionalNumber(row[ropIndex]) : null,
+      additionalQty: addQtyIndex >= 0 ? parseOptionalNumber(row[addQtyIndex]) : null,
+      forecastStatus: rawStatus ? rawStatus.toUpperCase() : null,
+      qtyPerCtn: qtyPerCtnIndex >= 0 ? parseOptionalNumber(row[qtyPerCtnIndex]) : null,
+      additionalCtn: addCtnIndex >= 0 ? parseOptionalNumber(row[addCtnIndex]) : null,
+    });
+  }
+  if (!map.size) throw new Error('Additional Qty Forecast offline returned no usable rows');
+  return { params, map };
+}
+
 function buildActiveSkuMap(rows) {
   let headerIndex = findHeader(rows, ['SKU', 'Status Barang']);
   let statusColumnName = 'Status Barang';
@@ -571,20 +630,24 @@ function proxyOnline(res, forceRefresh = false) {
 }
 
 async function loadOfflineData() {
-  const [clusteringRows, salesRows, costRows, paretoRows, activeSkuRows] = await Promise.all([
+  const [clusteringRows, salesRows, costRows, paretoRows, activeSkuRows, forecastRows] = await Promise.all([
     fetchCsv(clusteringOfflineGid),
     fetchCsv(monthlySalesGid),
     fetchCsv(masterCostGid, onlineSpreadsheetId),
     fetchCsv(offlineParetoGid),
     fetchCsv(activeSkuOfflineGid),
+    fetchCsv(offlineForecastGid),
   ]);
   const { minHistoryMonths, ...payload } = buildOfflineRecords(clusteringRows, salesRows, activeSkuRows);
   const costs = buildMasterCostMap(costRows);
   const pareto = buildParetoMap(paretoRows);
+  const forecast = buildOfflineForecastMap(forecastRows);
   const today = jakartaDay();
+  payload.forecastParams = forecast.params;
   payload.records = payload.records.map(row => {
     const key = skuKey(row.sku);
     const paretoEntry = pareto.get(key);
+    const fc = forecast.map.get(key);
     const hasUrgentExpiry = (row.expiries ?? []).some(exp => {
       const ms = Date.parse(exp.date + 'T00:00:00Z');
       if (!Number.isFinite(ms)) return false;
@@ -609,6 +672,15 @@ async function loadOfflineData() {
       paretoStatus: paretoEntry?.status ?? null,
       paretoContribution: paretoEntry?.contribution ?? null,
       paretoRank: paretoEntry?.rank ?? null,
+      leadTimeDemand: fc?.leadTimeDemand ?? null,
+      safetyStock: fc?.safetyStock ?? null,
+      minStockLevel: fc?.minStockLevel ?? null,
+      maxStockLevel: fc?.maxStockLevel ?? null,
+      reorderPoint: fc?.reorderPoint ?? null,
+      additionalQty: fc?.additionalQty ?? null,
+      forecastStatus: fc?.forecastStatus ?? null,
+      qtyPerCtn: fc?.qtyPerCtn ?? null,
+      additionalCtn: fc?.additionalCtn ?? null,
     };
   });
   return payload;
