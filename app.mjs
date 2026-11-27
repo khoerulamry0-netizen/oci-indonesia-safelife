@@ -1123,7 +1123,6 @@ function updateProvisionFilterOptions() {
 }
 
 function isRestockForecast(record) {
-  if (Number.isFinite(record.additionalQty) && record.additionalQty > 0) return true;
   const st = String(record.forecastStatus ?? '').trim().toUpperCase();
   return st === 'ORDER NOW' || st === 'KRITIS (RESTOCK SEGERA)' || st === 'PERLU RESTOCK';
 }
