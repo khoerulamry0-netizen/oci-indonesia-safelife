@@ -1042,11 +1042,12 @@ function updateProvisionFilterOptions() {
     provisionFilter.append(option);
   };
   addOpt('', t('all_provisions'));
-  if (statuses.some(isSubjectToProvision)) {
+  const hasHitOption = statuses.some(isSubjectToProvision);
+  if (hasHitOption) {
     addOpt('__KENA_PROVISI__', t('provision_all_hit'));
   }
   for (const status of statuses) addOpt(status, status);
-  if (selected && (selected === '__KENA_PROVISI__' || statuses.includes(selected))) {
+  if (selected && ((selected === '__KENA_PROVISI__' && hasHitOption) || statuses.includes(selected))) {
     provisionFilter.value = selected;
     pendingProvision = '';
   } else {
