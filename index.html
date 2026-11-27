@@ -222,8 +222,12 @@
               <span data-i18n="sku_status_filter">Status SKU Offline</span>
               <select id="sku-status-filter" disabled>
                 <option value="" data-i18n="all_status">Semua status</option>
-                <option value="active" data-i18n="active_sku_only">Active SKU</option>
-                <option value="inactive" data-i18n="inactive_sku_only">Inactive SKU</option>
+                <option value="active" data-i18n="active_sku_only">Active &amp; New</option>
+                <option value="ACTIVE" data-i18n="status_active_exact">Active</option>
+                <option value="NEW" data-i18n="status_new_sku">New SKU</option>
+                <option value="inactive" data-i18n="inactive_sku_only">Inactive (Deleted / Discontinue)</option>
+                <option value="DISCONTINUE" data-i18n="status_discontinue">Discontinue</option>
+                <option value="DELETED" data-i18n="status_deleted">Deleted</option>
               </select>
             </label>
 
@@ -240,6 +244,13 @@
               <span data-i18n="swc_note_filter">SWC Note</span>
               <select id="swc-note-filter" disabled>
                 <option value="" data-i18n="all_swc_notes">Semua SWC Note</option>
+              </select>
+            </label>
+
+            <label id="provision-filter-picker" class="filter-field" hidden>
+              <span data-i18n="provision_filter">Status Provisi</span>
+              <select id="provision-filter" disabled>
+                <option value="" data-i18n="all_provisions">Semua status provisi</option>
               </select>
             </label>
 
@@ -341,7 +352,7 @@
     </section>
 
     <footer class="page-footer">
-      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.</p>
+      <p class="footer-note" data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta Status Barang &amp; Provisi dari tab Active SKU offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
       <button type="button" id="method-open-footer" class="footer-link" data-i18n="method_title">Cara estimasi risiko expired</button>
     </footer>
   </main>
@@ -360,7 +371,7 @@
       <div class="dialog-body">
         <div class="method-block">
           <h3 data-i18n="data_sources_title">Sumber data</h3>
-          <p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.</p>
+          <p data-i18n="inventory_description">Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER &amp; SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta Status Barang &amp; Provisi dari tab Active SKU offline. Cost kedua channel dipetakan dari tab Master Cost.</p>
         </div>
         <div class="method-block">
           <h3 data-i18n="batch_method_title">Estimasi per batch</h3>

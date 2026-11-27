@@ -69,7 +69,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
-    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta status Active/Inactive SKU. Cost kedua channel dipetakan dari tab Master Cost.',
+    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, serta Status Barang & Provisi dari tab Active SKU offline. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
     search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
@@ -104,9 +104,21 @@ const translations = {
     sku_category_filter: 'Kategori SKU',
     all_sku_categories: 'Semua kategori',
     sku_status_filter: 'Status SKU Offline',
-    active_sku_only: 'Active SKU',
-    inactive_sku_only: 'Inactive SKU',
+    active_sku_only: 'Active & New',
+    inactive_sku_only: 'Inactive (Deleted / Discontinue)',
+    status_active_exact: 'Active',
+    status_new_sku: 'New SKU',
+    status_discontinue: 'Discontinue',
+    status_deleted: 'Deleted',
     inactive_tag: 'Inactive',
+    new_tag: 'New',
+    deleted_tag: 'Deleted',
+    discontinue_tag: 'Discontinue',
+    provision_filter: 'Status Provisi',
+    all_provisions: 'Semua status provisi',
+    provision_all_hit: 'Semua Kena Provisi',
+    provision_value_label: 'Nilai provisi',
+    first_arrival_label: 'Tanggal pertama datang',
     oos_filter: 'OOS Filter',
     oos_available_only: 'Stok tersedia (default)',
     oos_only: 'OOS (Stok habis)',
@@ -280,7 +292,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
-    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, and Active/Inactive SKU status. Cost for both channels is mapped from the Master Cost tab.',
+    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, and Item & Provision status from the Active SKU offline tab. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
     search_placeholder: 'Search SKU or product name…',
     online: 'Online',
@@ -315,9 +327,21 @@ const translations = {
     sku_category_filter: 'SKU category',
     all_sku_categories: 'All categories',
     sku_status_filter: 'Offline SKU status',
-    active_sku_only: 'Active SKU',
-    inactive_sku_only: 'Inactive SKU',
+    active_sku_only: 'Active & New',
+    inactive_sku_only: 'Inactive (Deleted / Discontinue)',
+    status_active_exact: 'Active',
+    status_new_sku: 'New SKU',
+    status_discontinue: 'Discontinue',
+    status_deleted: 'Deleted',
     inactive_tag: 'Inactive',
+    new_tag: 'New',
+    deleted_tag: 'Deleted',
+    discontinue_tag: 'Discontinue',
+    provision_filter: 'Provision Status',
+    all_provisions: 'All provision statuses',
+    provision_all_hit: 'All Subject to Provision',
+    provision_value_label: 'Provision value',
+    first_arrival_label: 'First arrival date',
     oos_filter: 'OOS Filter',
     oos_available_only: 'Stock available (default)',
     oos_only: 'OOS (Out of stock)',
@@ -519,6 +543,8 @@ const oosFilterPicker = getEl('oos-filter-picker');
 const oosFilter = getEl('oos-filter');
 const swcNotePicker = getEl('swc-note-picker');
 const swcNoteFilter = getEl('swc-note-filter');
+const provisionFilterPicker = getEl('provision-filter-picker');
+const provisionFilter = getEl('provision-filter');
 const riskValueFilter = getEl('risk-value-filter');
 const salesVelocityFilter = getEl('sales-velocity-filter');
 const prioritySort = getEl('priority-sort');
@@ -582,6 +608,7 @@ const filterDescriptors = [
   { select: skuStatusFilter, labelKey: 'sku_status_filter' },
   { select: oosFilter, labelKey: 'oos_filter' },
   { select: swcNoteFilter, labelKey: 'swc_note_filter' },
+  { select: provisionFilter, labelKey: 'provision_filter' },
   { select: riskValueFilter, labelKey: 'risk_value_filter' },
   { select: salesVelocityFilter, labelKey: 'sales_velocity' },
   { select: paretoFilter, labelKey: 'pareto' },
@@ -603,6 +630,7 @@ let activeDrawerRecord = null;
 let drawerOpener = null;
 let pendingCategory = '';
 let pendingSwcNote = '';
+let pendingProvision = '';
 
 const urlParamBindings = [
   ['q', search],
@@ -614,6 +642,7 @@ const urlParamBindings = [
   ['sku', skuStatusFilter],
   ['oos', oosFilter],
   ['swc', swcNoteFilter],
+  ['prov', provisionFilter],
   ['val', riskValueFilter],
   ['vel', salesVelocityFilter],
   ['pareto', paretoFilter],
@@ -639,6 +668,7 @@ function readUrlState() {
     if (!val) continue;
     if (key === 'cat') pendingCategory = val;
     else if (key === 'swc') pendingSwcNote = val;
+    else if (key === 'prov') pendingProvision = val;
     else if (control === search || [...control.options].some(opt => opt.value === val)) {
       control.value = val;
     }
@@ -654,6 +684,7 @@ function syncUrlState() {
     if (val) params.set(key, val);
     else if (key === 'cat' && pendingCategory && channel !== 'Offline') params.set(key, pendingCategory);
     else if (key === 'swc' && pendingSwcNote && channel === 'Offline') params.set(key, pendingSwcNote);
+    else if (key === 'prov' && pendingProvision && channel === 'Offline') params.set(key, pendingProvision);
   }
   if (sortKey !== 'value' || sortDir !== 'desc') {
     params.set('sort', sortKey);
@@ -694,7 +725,9 @@ function setChannel(nextChannel) {
     skuStatusFilter.value = '';
     oosFilter.value = '';
     swcNoteFilter.value = '';
+    provisionFilter.value = '';
     pendingSwcNote = '';
+    pendingProvision = '';
   }
   for (const item of filterButtons) item.setAttribute('aria-pressed', String(item.dataset.channel === channel));
   resetPagination();
@@ -934,6 +967,7 @@ function applyLanguage() {
   languageButtons.en.setAttribute('aria-pressed', String(locale === 'en'));
   updateSkuCategoryOptions();
   updateSwcNoteOptions();
+  updateProvisionFilterOptions();
   updateSkuCategoryVisibility();
   updateSyncStatus();
   applySortIndicators();
@@ -990,6 +1024,32 @@ function updateSwcNoteOptions() {
   }
 }
 
+function updateProvisionFilterOptions() {
+  const selected = pendingProvision || provisionFilter.value;
+  const statuses = [...new Set(offlineRecords
+    .map(record => String(record.provisionStatus ?? '').trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, locale === 'en' ? 'en' : 'id'));
+  provisionFilter.replaceChildren();
+  const addOpt = (val, label) => {
+    const option = document.createElement('option');
+    option.value = val;
+    option.textContent = label;
+    provisionFilter.append(option);
+  };
+  addOpt('', t('all_provisions'));
+  if (statuses.some(s => s.toLowerCase().includes('kena provisi'))) {
+    addOpt('__KENA_PROVISI__', t('provision_all_hit'));
+  }
+  for (const status of statuses) addOpt(status, status);
+  if (selected && (selected === '__KENA_PROVISI__' || statuses.includes(selected))) {
+    provisionFilter.value = selected;
+    pendingProvision = '';
+  } else {
+    provisionFilter.value = '';
+  }
+}
+
 function updateSkuCategoryVisibility() {
   const showCategory = channel !== 'Offline';
   skuCategoryPicker.hidden = !showCategory;
@@ -1002,6 +1062,8 @@ function updateSkuCategoryVisibility() {
   oosFilter.disabled = !isOffline;
   swcNotePicker.hidden = !isOffline;
   swcNoteFilter.disabled = !isOffline;
+  provisionFilterPicker.hidden = !isOffline;
+  provisionFilter.disabled = !isOffline;
   for (const btn of quickButtons) {
     const mode = btn.dataset.quick;
     if (mode === 'active' || mode === 'inactive') btn.hidden = !isOffline;
@@ -1068,8 +1130,20 @@ function visibleRecords() {
     .filter(record => matchesExpiryRange(record.daysLeft, expiryRangeFilter.value))
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel === 'Offline' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
-    .filter(record => channel !== 'Offline' || !skuStatusFilter.value || record.isActive === (skuStatusFilter.value === 'active'))
+    .filter(record => {
+      if (channel !== 'Offline' || !skuStatusFilter.value) return true;
+      if (skuStatusFilter.value === 'active') return record.isActive === true;
+      if (skuStatusFilter.value === 'inactive') return record.isActive === false;
+      return record.itemStatus === skuStatusFilter.value;
+    })
     .filter(record => channel !== 'Offline' || !swcNoteFilter.value || record.swcNote === swcNoteFilter.value)
+    .filter(record => {
+      if (channel !== 'Offline' || !provisionFilter.value) return true;
+      if (provisionFilter.value === '__KENA_PROVISI__') {
+        return String(record.provisionStatus ?? '').toLowerCase().includes('kena provisi');
+      }
+      return record.provisionStatus === provisionFilter.value;
+    })
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -1109,7 +1183,8 @@ function exportExcelFile() {
   const visible = visibleRecords();
   const columns = [
     t('product_sku'), 'SKU', t('channel'),
-    t('sku_category_filter'), t('sku_status_filter'), t('oos_filter'), t('swc_note_filter'),
+    t('sku_category_filter'), t('sku_status_filter'), t('provision_filter'), t('provision_value_label'),
+    t('oos_filter'), t('swc_note_filter'),
     t('available_stock').replace('<br>', ' '),
     t('total_stock_value'),
     t('risk_value_idr').replace('<br>', ' '),
@@ -1129,7 +1204,7 @@ function exportExcelFile() {
     const stockValue = pricedStockValue(record);
     const [riskLabel] = statusOf(record);
     const skuStatus = record.channel === 'Offline'
-      ? (record.isActive ? t('active_sku_only') : t('inactive_sku_only'))
+      ? (record.itemStatus || (record.isActive ? t('active_sku_only') : t('inactive_sku_only')))
       : '—';
     return [
       record.name,
@@ -1137,6 +1212,8 @@ function exportExcelFile() {
       channelLabel(record.channel),
       record.skuCategory || '—',
       skuStatus,
+      record.channel === 'Offline' ? (record.provisionStatus || '—') : '—',
+      record.channel === 'Offline' && Number.isFinite(record.provisionValue) ? formatRupiah(record.provisionValue) : '—',
       record.channel === 'Offline' ? (record.oosFilter || '—') : '—',
       record.channel === 'Offline' ? (record.swcNote || '—') : '—',
       number.format(record.stock),
@@ -1245,11 +1322,28 @@ function buildProductMeta(record) {
     tag.textContent = record.skuCategory;
     meta.append(tag);
   }
-  if (record.channel === 'Offline' && record.isActive === false) {
-    const tag = document.createElement('span');
-    tag.className = 'meta-tag meta-tag-inactive';
-    tag.textContent = t('inactive_tag');
-    meta.append(tag);
+  if (record.channel === 'Offline') {
+    if (record.itemStatus === 'NEW') {
+      const tag = document.createElement('span');
+      tag.className = 'meta-tag meta-tag-new';
+      tag.textContent = t('new_tag');
+      meta.append(tag);
+    } else if (record.itemStatus === 'DISCONTINUE') {
+      const tag = document.createElement('span');
+      tag.className = 'meta-tag meta-tag-inactive';
+      tag.textContent = t('discontinue_tag');
+      meta.append(tag);
+    } else if (record.itemStatus === 'DELETED') {
+      const tag = document.createElement('span');
+      tag.className = 'meta-tag meta-tag-inactive';
+      tag.textContent = t('deleted_tag');
+      meta.append(tag);
+    } else if (record.isActive === false) {
+      const tag = document.createElement('span');
+      tag.className = 'meta-tag meta-tag-inactive';
+      tag.textContent = t('inactive_tag');
+      meta.append(tag);
+    }
   }
   if (record.channel === 'Offline' && record.oosFilter === 'OOS') {
     const tag = document.createElement('span');
@@ -1368,7 +1462,7 @@ window.addEventListener('resize', syncQuickFilterFade);
 function syncQuickFilterPills() {
   const activeQuick = (() => {
     const anyExtra = Boolean(urgencyFilter.value || stockCoverFilter.value || skuCategoryFilter.value
-      || oosFilter.value || swcNoteFilter.value || riskValueFilter.value || salesVelocityFilter.value);
+      || oosFilter.value || swcNoteFilter.value || provisionFilter.value || riskValueFilter.value || salesVelocityFilter.value);
     if (anyExtra) return null;
     if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'all';
     if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'at-risk';
@@ -1407,6 +1501,7 @@ function renderActiveChips() {
       select.value = '';
       if (select === skuCategoryFilter) pendingCategory = '';
       if (select === swcNoteFilter) pendingSwcNote = '';
+      if (select === provisionFilter) pendingProvision = '';
       resetPagination();
       draw();
     });
@@ -1425,6 +1520,7 @@ function resetFilterSelections() {
   search.value = '';
   pendingCategory = '';
   pendingSwcNote = '';
+  pendingProvision = '';
   for (const { select } of filterDescriptors) select.value = '';
   sortKey = 'value';
   sortDir = 'desc';
@@ -1663,6 +1759,15 @@ function buildSkuSummaryText(record) {
     `ED terdekat: ${firstExp ? date.format(firstExp.date) + ' (' + number.format(firstExp.days) + ' hari lagi)' : '—'}`,
     `Status: ${statusLabel}`,
   ];
+  if (record.channel === 'Offline') {
+    if (record.itemStatus) lines.push(`Status Barang: ${record.itemStatus}`);
+    if (record.provisionStatus) {
+      const provRp = Number.isFinite(record.provisionValue) && record.provisionValue > 0
+        ? ` (${formatRupiah(record.provisionValue)})`
+        : '';
+      lines.push(`Provisi: ${record.provisionStatus}${provRp}`);
+    }
+  }
   return lines.join('\n');
 }
 
@@ -1736,6 +1841,15 @@ function openSkuDrawer(record, triggerEl = null) {
     number.format(record.stock) + ' pcs' + (record.risk !== null ? ' · ' + number.format(record.risk) + ' ' + t('batch_risk') : ''),
     record.risk > 0 ? 'is-qty-risk' : '',
   );
+  if (record.channel === 'Offline' && (record.provisionStatus || Number.isFinite(record.provisionValue))) {
+    addDrawerKpi(kpiGrid, t('provision_filter'), record.provisionStatus || '—');
+    addDrawerKpi(
+      kpiGrid,
+      t('provision_value_label'),
+      Number.isFinite(record.provisionValue) ? formatRupiah(record.provisionValue) : '—',
+      record.provisionValue > 0 ? 'is-risk' : '',
+    );
+  }
   drawerBody.append(kpiGrid);
 
   const metricsSection = document.createElement('div');
@@ -1758,10 +1872,17 @@ function openSkuDrawer(record, triggerEl = null) {
   rCover.insertCell().textContent = stockCoverMonthsFormat(record.stockCoverDays);
   miniTable.append(tb);
   metricsSection.append(metricsHeading, miniTable);
-  if (record.channel === 'Offline' && Number.isFinite(record.completedSalesMonths)) {
+  if (record.channel === 'Offline' && (Number.isFinite(record.completedSalesMonths) || record.firstArrivalDate)) {
+    const parts = [];
+    if (Number.isFinite(record.completedSalesMonths)) {
+      parts.push(t('closed_months_label') + ': ' + number.format(record.completedSalesMonths));
+    }
+    if (record.firstArrivalDate) {
+      parts.push(t('first_arrival_label') + ': ' + record.firstArrivalDate);
+    }
     const note = document.createElement('p');
     note.className = 'drawer-footnote';
-    note.textContent = t('closed_months_label') + ': ' + number.format(record.completedSalesMonths);
+    note.textContent = parts.join(' · ');
     metricsSection.append(note);
   }
   drawerBody.append(metricsSection);
@@ -2008,6 +2129,7 @@ for (const button of quickButtons) {
     const mode = button.dataset.quick;
     pendingCategory = '';
     pendingSwcNote = '';
+    pendingProvision = '';
     for (const { select } of filterDescriptors) select.value = '';
     if (mode === 'at-risk') riskFilter.value = 'at-risk';
     if (mode === 'ed90') expiryRangeFilter.value = '0-90';
@@ -2106,6 +2228,7 @@ for (const { select } of filterDescriptors) {
   select.addEventListener('change', () => {
     if (select === skuCategoryFilter) pendingCategory = '';
     if (select === swcNoteFilter) pendingSwcNote = '';
+    if (select === provisionFilter) pendingProvision = '';
     resetPagination();
     draw();
   });
@@ -2203,6 +2326,7 @@ async function refreshOffline(forceRefresh = false) {
     if (!Array.isArray(payload.records)) throw new Error('Offline sheet returned invalid data');
     offlineRecords = portfolio(payload.records);
     updateSwcNoteOptions();
+    updateProvisionFilterOptions();
     recordSyncTime('offline', response);
     offlineState = 'ready';
   } catch (error) {

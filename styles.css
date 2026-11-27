@@ -1776,6 +1776,12 @@ tbody tr:hover td.cover-cell {
   border: 1px solid var(--warn-border);
 }
 
+.meta-tag-new {
+  color: var(--ok-700);
+  background: var(--ok-50);
+  border: 1px solid var(--ok-border);
+}
+
 .meta-tag-oos {
   color: var(--danger-700);
   background: var(--danger-50);

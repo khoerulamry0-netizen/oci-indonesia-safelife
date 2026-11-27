@@ -381,8 +381,14 @@ function buildParetoMap(rows) {
 }
 
 function buildActiveSkuMap(rows) {
-  let headerIndex = findHeader(rows, ['SKU', 'Active Status']);
-  let statusColumnName = 'Active Status';
+  let headerIndex = findHeader(rows, ['SKU', 'Status Barang']);
+  let statusColumnName = 'Status Barang';
+  let useItemStatusSchema = headerIndex >= 0;
+
+  if (headerIndex < 0) {
+    headerIndex = findHeader(rows, ['SKU', 'Active Status']);
+    statusColumnName = 'Active Status';
+  }
 
   if (headerIndex < 0) {
     headerIndex = findHeader(rows, ['SKU', 'Note']);
@@ -393,15 +399,39 @@ function buildActiveSkuMap(rows) {
   const header = rows[headerIndex];
   const skuIndex = columnIndex(header, 'SKU');
   const statusIndex = columnIndex(header, statusColumnName);
+  const firstArrivalIndex = columnIndex(header, 'Tanggal Pertama Datang');
+  const provisionStatusIndex = columnIndex(header, 'Status Provisi');
+  const provisionValueIndex = columnIndex(header, 'Nilai Provisi (Rp)');
   const activeMap = new Map();
   for (const row of rows.slice(headerIndex + 1)) {
-    const sku = String(row[skuIndex] ?? '').trim().toUpperCase();
+    const sku = skuKey(row[skuIndex]);
     if (!sku || activeMap.has(sku)) continue;
-    const status = String(row[statusIndex] ?? '').trim().toLowerCase();
-    activeMap.set(sku, status === 'active' || status === 'ya' || status === '1' || status === 'true');
+    const rawStatus = String(row[statusIndex] ?? '').trim();
+    const upperStatus = rawStatus ? rawStatus.toUpperCase() : null;
+    const lowerStatus = rawStatus.toLowerCase();
+    const isActive = useItemStatusSchema
+      ? (upperStatus === 'ACTIVE' || upperStatus === 'NEW')
+      : (lowerStatus === 'active' || lowerStatus === 'new' || lowerStatus === 'ya' || lowerStatus === '1' || lowerStatus === 'true');
+    activeMap.set(sku, {
+      isActive,
+      itemStatus: upperStatus,
+      firstArrivalDate: firstArrivalIndex >= 0 ? String(row[firstArrivalIndex] ?? '').trim() || null : null,
+      provisionStatus: provisionStatusIndex >= 0 ? String(row[provisionStatusIndex] ?? '').trim() || null : null,
+      provisionValue: provisionValueIndex >= 0 ? parseRupiah(row[provisionValueIndex]) : null,
+    });
   }
   if (!activeMap.size) throw new Error('Active SKU Offline returned no usable rows');
   return activeMap;
+}
+
+function activeStatusFields(activeInfo) {
+  return {
+    isActive: activeInfo?.isActive ?? false,
+    itemStatus: activeInfo?.itemStatus ?? null,
+    firstArrivalDate: activeInfo?.firstArrivalDate ?? null,
+    provisionStatus: activeInfo?.provisionStatus ?? null,
+    provisionValue: activeInfo?.provisionValue ?? null,
+  };
 }
 
 function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
@@ -504,7 +534,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       swcNote: group.swcNote,
       undatedStock: group.undatedStock,
       expiries: [...group.expiries].map(([date, qty]) => ({ date, qty })),
-      isActive: activeSkuMap.get(key) ?? false,
+      ...activeStatusFields(activeSkuMap.get(key)),
     };
   });
   const oosRecords = [];
@@ -522,7 +552,7 @@ function buildOfflineRecords(clusteringRows, salesRows, activeSkuRows) {
       swcNote: salesInfo.swcNote,
       undatedStock: 0,
       expiries: [],
-      isActive: activeSkuMap.get(key) ?? false,
+      ...activeStatusFields(activeSkuMap.get(key)),
     });
   }
   return {
@@ -564,7 +594,8 @@ async function loadOfflineData() {
     const isRampUpSku = row.isActive === true
       && !hasUrgentExpiry
       && (
-        row.completedSalesMonths < minHistoryMonths
+        row.itemStatus === 'NEW'
+        || row.completedSalesMonths < minHistoryMonths
         || ((row.averageMonthlySales === 0 || row.averageMonthlySales === null) && !paretoEntry?.status)
       );
     return {
