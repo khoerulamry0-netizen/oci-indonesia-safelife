@@ -802,7 +802,7 @@ body {
 }
 
 /* =========================================================
-   Offline Additional Qty Forecast Strip
+   Additional Qty Forecast Strip
    ========================================================= */
 .forecast-strip {
   background: var(--surface);
@@ -899,6 +899,18 @@ body {
 .forecast-metric-value.is-order { color: #0369a1; }
 .forecast-metric-value.is-qty { color: var(--brand-800); }
 .forecast-metric-value.is-overstock { color: var(--warn-700); }
+
+.forecast-metric-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.forecast-metric-sub:empty {
+  display: none;
+}
 
 /* =========================================================
    Shimmer Skeletons, Clickable Rows, Pagination & SKU Drawer

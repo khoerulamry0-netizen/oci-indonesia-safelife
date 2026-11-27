@@ -69,7 +69,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
-    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang & Provisi dari tab Active SKU offline, serta rencana restock dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.',
+    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup serta rencana restock dari tab Additional Qty Forecast online. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang & Provisi dari tab Active SKU offline, serta rencana restock dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
     search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
@@ -223,12 +223,14 @@ const translations = {
     click_to_filter: 'Klik untuk memfilter',
     view_details: 'Detail',
     clear_search: 'Hapus pencarian',
-    forecast_strip_title: 'Additional Qty Forecast · Offline',
-    fc_order_now_label: 'Perlu order (ORDER NOW)',
+    forecast_strip_title: 'Additional Qty Forecast',
+    fc_order_now_label: 'Perlu restock',
     fc_total_qty_label: 'Total Additional Qty',
     fc_overstock_label: 'Overstock (> Max Level)',
     forecast_status_filter: 'Status Forecast',
     all_forecast_status: 'Semua status forecast',
+    fc_all_restock: 'Semua Perlu Restock',
+    fc_all_overstock: 'Semua Overstock',
     fc_order_now: 'Order Now (Perlu restock)',
     fc_near_min: 'Near Min',
     fc_ok: 'OK',
@@ -236,6 +238,8 @@ const translations = {
     sort_forecast: 'Additional qty terbesar',
     drawer_forecast_title: 'Additional Qty Forecast',
     fc_additional_qty: 'Additional Qty',
+    fc_est_order_value: 'Estimasi nilai order',
+    fc_critical_short: 'kritis',
     fc_reorder_point: 'Reorder Point',
     fc_lead_time_demand: 'Lead Time Demand',
     fc_safety_stock: 'Safety Stock',
@@ -310,7 +314,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
-    inventory_description: 'Online uses the latest 13 closed shipment weeks. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, Item & Provision status from the Active SKU offline tab, and restock planning from the Additional Qty Forecast offline tab. Cost for both channels is mapped from the Master Cost tab.',
+    inventory_description: 'Online uses the latest 13 closed shipment weeks and restock planning from the Additional Qty Forecast online tab. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, Item & Provision status from the Active SKU offline tab, and restock planning from the Additional Qty Forecast offline tab. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
     search_placeholder: 'Search SKU or product name…',
     online: 'Online',
@@ -464,12 +468,14 @@ const translations = {
     click_to_filter: 'Click to filter',
     view_details: 'Details',
     clear_search: 'Clear search',
-    forecast_strip_title: 'Additional Qty Forecast · Offline',
-    fc_order_now_label: 'Needs order (ORDER NOW)',
+    forecast_strip_title: 'Additional Qty Forecast',
+    fc_order_now_label: 'Needs restock',
     fc_total_qty_label: 'Total Additional Qty',
     fc_overstock_label: 'Overstock (> Max Level)',
     forecast_status_filter: 'Forecast Status',
     all_forecast_status: 'All forecast statuses',
+    fc_all_restock: 'All Needs Restock',
+    fc_all_overstock: 'All Overstock',
     fc_order_now: 'Order Now (Restock)',
     fc_near_min: 'Near Min',
     fc_ok: 'OK',
@@ -477,6 +483,8 @@ const translations = {
     sort_forecast: 'Largest additional qty',
     drawer_forecast_title: 'Additional Qty Forecast',
     fc_additional_qty: 'Additional Qty',
+    fc_est_order_value: 'Est. order value',
+    fc_critical_short: 'critical',
     fc_reorder_point: 'Reorder Point',
     fc_lead_time_demand: 'Lead Time Demand',
     fc_safety_stock: 'Safety Stock',
@@ -541,6 +549,7 @@ function formatRupiah(value) {
 let records = [];
 let offlineRecords = [];
 let offlineForecastParams = null;
+let onlineForecastParams = null;
 let onlineRecords = [];
 let offlineState = 'loading';
 let onlineState = 'loading';
@@ -601,11 +610,13 @@ const insightsStrip = getEl('insights-strip');
 const insightPrimary = getEl('insight-primary');
 const insightExpiry = getEl('insight-expiry');
 const forecastStrip = getEl('forecast-strip');
+const forecastStripTitle = getEl('forecast-strip-title');
 const forecastParamsEl = getEl('forecast-params');
 const fcOrderBtn = getEl('fc-order-now');
 const fcOrderCount = getEl('fc-order-count');
 const fcQtyBtn = getEl('fc-total-qty');
 const fcQtyValue = getEl('fc-qty-value');
+const fcQtySub = getEl('fc-qty-sub');
 const fcOverstockBtn = getEl('fc-overstock');
 const fcOverstockCount = getEl('fc-overstock-count');
 const activeChips = getEl('active-chips');
@@ -679,6 +690,7 @@ let drawerOpener = null;
 let pendingCategory = '';
 let pendingSwcNote = '';
 let pendingProvision = '';
+let pendingForecastStatus = '';
 
 const urlParamBindings = [
   ['q', search],
@@ -718,6 +730,7 @@ function readUrlState() {
     if (key === 'cat') pendingCategory = val;
     else if (key === 'swc') pendingSwcNote = val;
     else if (key === 'prov') pendingProvision = val;
+    else if (key === 'fc') pendingForecastStatus = val;
     else if (control === search || [...control.options].some(opt => opt.value === val)) {
       control.value = val;
     }
@@ -734,6 +747,7 @@ function syncUrlState() {
     else if (key === 'cat' && pendingCategory && channel !== 'Offline') params.set(key, pendingCategory);
     else if (key === 'swc' && pendingSwcNote && channel === 'Offline') params.set(key, pendingSwcNote);
     else if (key === 'prov' && pendingProvision && channel === 'Offline') params.set(key, pendingProvision);
+    else if (key === 'fc' && pendingForecastStatus) params.set(key, pendingForecastStatus);
   }
   if (sortKey !== 'value' || sortDir !== 'desc') {
     params.set('sort', sortKey);
@@ -775,16 +789,13 @@ function setChannel(nextChannel) {
     oosFilter.value = '';
     swcNoteFilter.value = '';
     provisionFilter.value = '';
-    forecastStatusFilter.value = '';
     pendingSwcNote = '';
     pendingProvision = '';
-    if (sortKey === 'forecast') {
-      sortKey = 'value';
-      sortDir = 'desc';
-    }
   }
+  pendingForecastStatus = '';
   for (const item of filterButtons) item.setAttribute('aria-pressed', String(item.dataset.channel === channel));
   resetPagination();
+  updateForecastStatusOptions();
   updateSkuCategoryVisibility();
   applySortIndicators();
   draw();
@@ -1023,6 +1034,7 @@ function applyLanguage() {
   updateSkuCategoryOptions();
   updateSwcNoteOptions();
   updateProvisionFilterOptions();
+  updateForecastStatusOptions();
   updateSkuCategoryVisibility();
   updateSyncStatus();
   applySortIndicators();
@@ -1110,6 +1122,71 @@ function updateProvisionFilterOptions() {
   }
 }
 
+function isRestockForecast(record) {
+  if (Number.isFinite(record.additionalQty) && record.additionalQty > 0) return true;
+  const st = String(record.forecastStatus ?? '').trim().toUpperCase();
+  return st === 'ORDER NOW' || st === 'KRITIS (RESTOCK SEGERA)' || st === 'PERLU RESTOCK';
+}
+
+function isOverstockForecast(record) {
+  return String(record.forecastStatus ?? '').trim().toUpperCase() === 'OVERSTOCK';
+}
+
+const forecastStatusOrder = [
+  'KRITIS (RESTOCK SEGERA)',
+  'ORDER NOW',
+  'PERLU RESTOCK',
+  'NEAR MIN',
+  'AMAN',
+  'OK',
+  'OVERSTOCK',
+  'STOK PASIF',
+];
+
+function updateForecastStatusOptions() {
+  const scope = channel === 'Online' ? onlineRecords : (channel === 'Offline' ? offlineRecords : records);
+  const selected = pendingForecastStatus || forecastStatusFilter.value;
+  const statusMap = new Map();
+  for (const r of scope) {
+    const raw = String(r.forecastStatus ?? '').trim();
+    if (!raw) continue;
+    const upper = raw.toUpperCase();
+    if (!statusMap.has(upper)) statusMap.set(upper, raw);
+  }
+  const statuses = [...statusMap.values()].sort((a, b) => {
+    const ai = forecastStatusOrder.indexOf(a.toUpperCase());
+    const bi = forecastStatusOrder.indexOf(b.toUpperCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b, locale === 'en' ? 'en' : 'id');
+  });
+
+  forecastStatusFilter.replaceChildren();
+  const addOpt = (val, label) => {
+    const option = document.createElement('option');
+    option.value = val;
+    option.textContent = label;
+    forecastStatusFilter.append(option);
+  };
+  addOpt('', t('all_forecast_status'));
+  if (scope.some(isRestockForecast) && channel !== 'Offline') {
+    addOpt('__NEED_RESTOCK__', t('fc_all_restock'));
+  }
+  if (scope.some(isOverstockForecast) && channel === 'all') {
+    addOpt('__OVERSTOCK__', t('fc_all_overstock'));
+  }
+  for (const status of statuses) addOpt(status, status);
+
+  const hasMatch = Boolean(selected) && [...forecastStatusFilter.options].some(opt => opt.value === selected);
+  if (hasMatch) {
+    forecastStatusFilter.value = selected;
+    pendingForecastStatus = '';
+  } else {
+    forecastStatusFilter.value = '';
+  }
+}
+
 function updateSkuCategoryVisibility() {
   const showCategory = channel !== 'Offline';
   skuCategoryPicker.hidden = !showCategory;
@@ -1124,15 +1201,6 @@ function updateSkuCategoryVisibility() {
   swcNoteFilter.disabled = !isOffline;
   provisionFilterPicker.hidden = !isOffline;
   provisionFilter.disabled = !isOffline;
-  forecastStatusPicker.hidden = !isOffline;
-  forecastStatusFilter.disabled = !isOffline;
-  for (const sel of [prioritySort, mobilePrioritySort]) {
-    const fcOpt = sel?.querySelector('option[value="forecast"]');
-    if (fcOpt) {
-      fcOpt.hidden = !isOffline;
-      fcOpt.disabled = !isOffline;
-    }
-  }
   for (const btn of quickButtons) {
     const mode = btn.dataset.quick;
     if (mode === 'active' || mode === 'inactive') btn.hidden = !isOffline;
@@ -1215,7 +1283,12 @@ function visibleRecords() {
       }
       return record.provisionStatus === provisionFilter.value;
     })
-    .filter(record => channel !== 'Offline' || !forecastStatusFilter.value || record.forecastStatus === forecastStatusFilter.value)
+    .filter(record => {
+      if (!forecastStatusFilter.value) return true;
+      if (forecastStatusFilter.value === '__NEED_RESTOCK__') return isRestockForecast(record);
+      if (forecastStatusFilter.value === '__OVERSTOCK__') return isOverstockForecast(record);
+      return String(record.forecastStatus ?? '').trim().toUpperCase() === forecastStatusFilter.value.toUpperCase();
+    })
     .filter(record => !riskValueFilter.value || riskValueBand(record) === riskValueFilter.value)
     .filter(record => !salesVelocityFilter.value || salesVelocityBand(record) === salesVelocityFilter.value)
     .filter(record => !paretoFilter.value || record.paretoStatus === paretoFilter.value);
@@ -1256,7 +1329,7 @@ function exportExcelFile() {
   const columns = [
     t('product_sku'), 'SKU', t('channel'),
     t('sku_category_filter'), t('sku_status_filter'), t('provision_filter'), t('provision_value_label'),
-    t('forecast_status_filter'), 'Additional Qty (pcs)', 'Additional Qty (CTN)',
+    t('forecast_status_filter'), 'Additional Qty (pcs)', 'Additional Qty (CTN)', t('fc_est_order_value'),
     t('fc_reorder_point'), 'Min Stock Level', 'Max Stock Level',
     t('oos_filter'), t('swc_note_filter'),
     t('available_stock').replace('<br>', ' '),
@@ -1288,12 +1361,13 @@ function exportExcelFile() {
       skuStatus,
       record.channel === 'Offline' ? (record.provisionStatus || '—') : '—',
       record.channel === 'Offline' && Number.isFinite(record.provisionValue) ? formatRupiah(record.provisionValue) : '—',
-      record.channel === 'Offline' ? (record.forecastStatus || '—') : '—',
-      record.channel === 'Offline' && Number.isFinite(record.additionalQty) ? number.format(record.additionalQty) : '—',
-      record.channel === 'Offline' && Number.isFinite(record.additionalCtn) ? number.format(record.additionalCtn) : '—',
-      record.channel === 'Offline' && Number.isFinite(record.reorderPoint) ? number.format(record.reorderPoint) : '—',
-      record.channel === 'Offline' && Number.isFinite(record.minStockLevel) ? number.format(record.minStockLevel) : '—',
-      record.channel === 'Offline' && Number.isFinite(record.maxStockLevel) ? number.format(record.maxStockLevel) : '—',
+      record.forecastStatus || '—',
+      Number.isFinite(record.additionalQty) ? number.format(record.additionalQty) : '—',
+      Number.isFinite(record.additionalCtn) ? number.format(record.additionalCtn) : '—',
+      Number.isFinite(record.forecastOrderValue) ? formatRupiah(record.forecastOrderValue) : '—',
+      Number.isFinite(record.reorderPoint) ? number.format(record.reorderPoint) : '—',
+      Number.isFinite(record.minStockLevel) ? number.format(record.minStockLevel) : '—',
+      Number.isFinite(record.maxStockLevel) ? number.format(record.maxStockLevel) : '—',
       record.channel === 'Offline' ? (record.oosFilter || '—') : '—',
       record.channel === 'Offline' ? (record.swcNote || '—') : '—',
       number.format(record.stock),
@@ -1437,7 +1511,7 @@ function buildProductMeta(record) {
     tag.textContent = record.swcNote;
     meta.append(tag);
   }
-  if (record.channel === 'Offline' && record.additionalQty > 0) {
+  if (record.additionalQty > 0) {
     const tag = document.createElement('span');
     tag.className = 'meta-tag meta-tag-forecast';
     const ctnPart = record.additionalCtn > 0 ? ' · ' + number.format(record.additionalCtn) + ' CTN' : '';
@@ -1590,6 +1664,7 @@ function renderActiveChips() {
       if (select === skuCategoryFilter) pendingCategory = '';
       if (select === swcNoteFilter) pendingSwcNote = '';
       if (select === provisionFilter) pendingProvision = '';
+      if (select === forecastStatusFilter) pendingForecastStatus = '';
       resetPagination();
       draw();
     });
@@ -1609,6 +1684,7 @@ function resetFilterSelections() {
   pendingCategory = '';
   pendingSwcNote = '';
   pendingProvision = '';
+  pendingForecastStatus = '';
   for (const { select } of filterDescriptors) select.value = '';
   sortKey = 'value';
   sortDir = 'desc';
@@ -1855,10 +1931,11 @@ function buildSkuSummaryText(record) {
         : '';
       lines.push(`Provisi: ${record.provisionStatus}${provRp}`);
     }
-    if (record.forecastStatus || Number.isFinite(record.additionalQty)) {
-      const ctnTxt = record.additionalCtn > 0 ? ` (${number.format(record.additionalCtn)} CTN)` : '';
-      lines.push(`Forecast: ${record.forecastStatus || '—'} · Additional Qty: ${number.format(record.additionalQty ?? 0)} pcs${ctnTxt}`);
-    }
+  }
+  if (record.forecastStatus || Number.isFinite(record.additionalQty)) {
+    const ctnTxt = record.additionalCtn > 0 ? ` (${number.format(record.additionalCtn)} CTN)` : '';
+    const estValTxt = record.forecastOrderValue > 0 ? ` · Est. ${formatRupiah(record.forecastOrderValue)}` : '';
+    lines.push(`Forecast: ${record.forecastStatus || '—'} · Additional Qty: ${number.format(record.additionalQty ?? 0)} pcs${ctnTxt}${estValTxt}`);
   }
   return lines.join('\n');
 }
@@ -1979,7 +2056,7 @@ function openSkuDrawer(record, triggerEl = null) {
   }
   drawerBody.append(metricsSection);
 
-  if (record.channel === 'Offline' && (record.forecastStatus || Number.isFinite(record.additionalQty))) {
+  if (record.forecastStatus || Number.isFinite(record.additionalQty)) {
     const fcSection = document.createElement('div');
     fcSection.className = 'drawer-section';
     const fcHeading = document.createElement('h3');
@@ -1993,9 +2070,11 @@ function openSkuDrawer(record, triggerEl = null) {
       const ctnTxt = record.additionalCtn > 0 ? ' · ' + number.format(record.additionalCtn) + ' CTN' : '';
       titleEl.textContent = (record.forecastStatus || 'ORDER NOW') + ': +' + number.format(record.additionalQty) + ' pcs' + ctnTxt;
       const descEl = document.createElement('span');
-      const ropTxt = Number.isFinite(record.reorderPoint) ? t('fc_reorder_point') + ': ' + number.format(record.reorderPoint) + ' pcs' : '';
-      const ctnSizeTxt = record.qtyPerCtn > 0 ? ' · ' + t('fc_qty_per_ctn') + ': ' + number.format(record.qtyPerCtn) + ' pcs' : '';
-      descEl.textContent = ropTxt + ctnSizeTxt;
+      const descParts = [];
+      if (record.forecastOrderValue > 0) descParts.push(t('fc_est_order_value') + ': ' + formatRupiah(record.forecastOrderValue));
+      if (Number.isFinite(record.reorderPoint)) descParts.push(t('fc_reorder_point') + ': ' + number.format(record.reorderPoint) + ' pcs');
+      if (record.qtyPerCtn > 0) descParts.push(t('fc_qty_per_ctn') + ': ' + number.format(record.qtyPerCtn) + ' pcs');
+      descEl.textContent = descParts.join(' · ');
       banner.append(titleEl, descEl);
       fcSection.append(banner);
     }
@@ -2007,7 +2086,12 @@ function openSkuDrawer(record, triggerEl = null) {
       : '—';
     addDrawerKpi(fcGrid, t('fc_additional_qty'), addTxt, record.additionalQty > 0 ? 'is-order' : '');
     addDrawerKpi(fcGrid, t('forecast_status_filter'), record.forecastStatus || '—');
-    addDrawerKpi(fcGrid, t('fc_reorder_point'), Number.isFinite(record.reorderPoint) ? number.format(record.reorderPoint) + ' pcs' : '—');
+    if (Number.isFinite(record.forecastOrderValue)) {
+      addDrawerKpi(fcGrid, t('fc_est_order_value'), formatRupiah(record.forecastOrderValue), record.forecastOrderValue > 0 ? 'is-order' : '');
+    }
+    if (Number.isFinite(record.reorderPoint)) {
+      addDrawerKpi(fcGrid, t('fc_reorder_point'), number.format(record.reorderPoint) + ' pcs');
+    }
     addDrawerKpi(fcGrid, t('fc_lead_time_demand'), Number.isFinite(record.leadTimeDemand) ? number.format(record.leadTimeDemand) + ' pcs' : '—');
     addDrawerKpi(fcGrid, t('fc_safety_stock'), Number.isFinite(record.safetyStock) ? number.format(record.safetyStock) + ' pcs' : '—');
     const minMaxTxt = Number.isFinite(record.minStockLevel) && Number.isFinite(record.maxStockLevel)
@@ -2096,48 +2180,96 @@ function closeSkuDrawer() {
   drawerOpener = null;
 }
 
+function restockFilterValue() {
+  if (channel === 'Offline') return 'ORDER NOW';
+  return [...forecastStatusFilter.options].some(opt => opt.value === '__NEED_RESTOCK__') ? '__NEED_RESTOCK__' : '';
+}
+
+function overstockFilterValue() {
+  if (channel === 'Offline') return 'OVERSTOCK';
+  if (channel === 'Online') return 'Overstock';
+  return [...forecastStatusFilter.options].some(opt => opt.value === '__OVERSTOCK__') ? '__OVERSTOCK__' : 'Overstock';
+}
+
+function formatForecastParamsText() {
+  const on = onlineForecastParams;
+  const off = offlineForecastParams;
+  const onUnit = locale === 'en' ? 'w' : ' mgg';
+  const offUnit = locale === 'en' ? 'd' : 'h';
+  if (channel === 'Online') {
+    return on && Number.isFinite(on.leadTimeWeeks)
+      ? `LT ${number.format(on.leadTimeWeeks)}${onUnit} · SS ${number.format(on.safetyStockWeeks)}${onUnit} · Min ${number.format(on.minStockWeeks)}${onUnit} · Max ${number.format(on.maxStockWeeks)}${onUnit}`
+      : '';
+  }
+  if (channel === 'Offline') {
+    return off && Number.isFinite(off.leadTimeDays)
+      ? `LT ${number.format(off.leadTimeDays)}${offUnit} · SS ${number.format(off.safetyStockDays)}${offUnit} · Min ${number.format(off.minStockDays)}${offUnit} · Max ${number.format(off.maxStockDays)}${offUnit}`
+      : '';
+  }
+  const parts = [];
+  if (on && Number.isFinite(on.leadTimeWeeks)) {
+    parts.push(`Online: LT ${number.format(on.leadTimeWeeks)}${onUnit} / Max ${number.format(on.maxStockWeeks)}${onUnit}`);
+  }
+  if (off && Number.isFinite(off.leadTimeDays)) {
+    parts.push(`Offline: LT ${number.format(off.leadTimeDays)}${offUnit} / Max ${number.format(off.maxStockDays)}${offUnit}`);
+  }
+  return parts.join(' · ');
+}
+
 function renderForecastStrip(visible) {
   if (!forecastStrip) return;
-  if (channel !== 'Offline' || !visible.length) {
+  if (!visible.length) {
     forecastStrip.hidden = true;
     return;
   }
   let orderNowCount = 0;
+  let criticalCount = 0;
   let overstockCount = 0;
   let totalAddQty = 0;
   let totalAddCtn = 0;
+  let totalOrderVal = 0;
   let hasForecastData = false;
   for (const r of visible) {
     if (r.forecastStatus) hasForecastData = true;
-    if (r.forecastStatus === 'ORDER NOW') orderNowCount += 1;
-    if (r.forecastStatus === 'OVERSTOCK') overstockCount += 1;
+    if (isRestockForecast(r)) orderNowCount += 1;
+    if (String(r.forecastStatus ?? '').trim().toUpperCase() === 'KRITIS (RESTOCK SEGERA)') criticalCount += 1;
+    if (isOverstockForecast(r)) overstockCount += 1;
     if (Number.isFinite(r.additionalQty)) {
       hasForecastData = true;
       totalAddQty += r.additionalQty;
     }
     if (Number.isFinite(r.additionalCtn)) totalAddCtn += r.additionalCtn;
+    if (Number.isFinite(r.forecastOrderValue) && r.forecastOrderValue > 0) totalOrderVal += r.forecastOrderValue;
   }
   if (!hasForecastData) {
     forecastStrip.hidden = true;
     return;
   }
   forecastStrip.hidden = false;
-  if (forecastParamsEl) {
-    const p = offlineForecastParams;
-    const unit = locale === 'en' ? 'd' : 'h';
-    forecastParamsEl.textContent = p && Number.isFinite(p.leadTimeDays)
-      ? `LT ${number.format(p.leadTimeDays)}${unit} · SS ${number.format(p.safetyStockDays)}${unit} · Min ${number.format(p.minStockDays)}${unit} · Max ${number.format(p.maxStockDays)}${unit}`
-      : '';
+  if (forecastStripTitle) {
+    forecastStripTitle.textContent = t('forecast_strip_title') + ' · ' + channelLabel(channel);
   }
-  fcOrderCount.textContent = number.format(orderNowCount) + ' SKU';
+  if (forecastParamsEl) {
+    forecastParamsEl.textContent = formatForecastParamsText();
+  }
+  fcOrderCount.textContent = number.format(orderNowCount) + ' SKU'
+    + (channel === 'Online' && criticalCount > 0 ? ' (' + number.format(criticalCount) + ' ' + t('fc_critical_short') + ')' : '');
   fcQtyValue.textContent = number.format(totalAddQty) + ' pcs · ' + number.format(totalAddCtn) + ' CTN';
+  if (fcQtySub) {
+    fcQtySub.textContent = totalOrderVal > 0 ? 'Est. ' + compactRiskValue(totalOrderVal) : '';
+  }
   fcOverstockCount.textContent = number.format(overstockCount) + ' SKU';
-  fcOrderBtn?.classList.toggle('is-active', forecastStatusFilter.value === 'ORDER NOW');
-  fcOrderBtn?.setAttribute('aria-pressed', String(forecastStatusFilter.value === 'ORDER NOW'));
+
+  const restockVal = restockFilterValue();
+  const overstockVal = overstockFilterValue();
+  const isRestockActive = Boolean(restockVal) && forecastStatusFilter.value === restockVal;
+  const isOverstockActive = Boolean(overstockVal) && forecastStatusFilter.value.toUpperCase() === overstockVal.toUpperCase();
+  fcOrderBtn?.classList.toggle('is-active', isRestockActive);
+  fcOrderBtn?.setAttribute('aria-pressed', String(isRestockActive));
   fcQtyBtn?.classList.toggle('is-active', sortKey === 'forecast');
   fcQtyBtn?.setAttribute('aria-pressed', String(sortKey === 'forecast'));
-  fcOverstockBtn?.classList.toggle('is-active', forecastStatusFilter.value === 'OVERSTOCK');
-  fcOverstockBtn?.setAttribute('aria-pressed', String(forecastStatusFilter.value === 'OVERSTOCK'));
+  fcOverstockBtn?.classList.toggle('is-active', isOverstockActive);
+  fcOverstockBtn?.setAttribute('aria-pressed', String(isOverstockActive));
 }
 
 function draw() {
@@ -2307,6 +2439,7 @@ for (const button of quickButtons) {
     pendingCategory = '';
     pendingSwcNote = '';
     pendingProvision = '';
+    pendingForecastStatus = '';
     for (const { select } of filterDescriptors) select.value = '';
     if (mode === 'at-risk') riskFilter.value = 'at-risk';
     if (mode === 'ed90') expiryRangeFilter.value = '0-90';
@@ -2363,8 +2496,14 @@ shareViewButton?.addEventListener('click', async () => {
   }, 2000);
 });
 
-fcOrderBtn?.addEventListener('click', () => toggleSelectFilter(forecastStatusFilter, 'ORDER NOW'));
-fcOverstockBtn?.addEventListener('click', () => toggleSelectFilter(forecastStatusFilter, 'OVERSTOCK'));
+fcOrderBtn?.addEventListener('click', () => {
+  const val = restockFilterValue();
+  if (val) toggleSelectFilter(forecastStatusFilter, val);
+});
+fcOverstockBtn?.addEventListener('click', () => {
+  const val = overstockFilterValue();
+  if (val) toggleSelectFilter(forecastStatusFilter, val);
+});
 fcQtyBtn?.addEventListener('click', () => {
   sortKey = sortKey === 'forecast' ? 'value' : 'forecast';
   sortDir = defaultSortDir[sortKey] ?? 'desc';
@@ -2416,6 +2555,7 @@ for (const { select } of filterDescriptors) {
     if (select === skuCategoryFilter) pendingCategory = '';
     if (select === swcNoteFilter) pendingSwcNote = '';
     if (select === provisionFilter) pendingProvision = '';
+    if (select === forecastStatusFilter) pendingForecastStatus = '';
     resetPagination();
     draw();
   });
@@ -2515,6 +2655,7 @@ async function refreshOffline(forceRefresh = false) {
     offlineRecords = portfolio(payload.records);
     updateSwcNoteOptions();
     updateProvisionFilterOptions();
+    updateForecastStatusOptions();
     recordSyncTime('offline', response);
     offlineState = 'ready';
   } catch (error) {
@@ -2530,7 +2671,10 @@ async function refreshOnline(forceRefresh = false) {
   try {
     const response = await fetch('/api/online' + (forceRefresh ? '?refresh=1' : ''), { cache: 'no-store' });
     if (!response.ok) throw new Error('Feed unavailable');
-    const rows = await response.json();
+    const payload = await response.json();
+    const rows = Array.isArray(payload) ? payload : payload.records;
+    if (!Array.isArray(rows)) throw new Error('Online feed returned invalid data');
+    onlineForecastParams = Array.isArray(payload) ? null : (payload.forecastParams ?? null);
     const today = jakartaDay();
     onlineRecords = rows.map(row => {
       const effectiveDailySales = row.incomplete ? null : row.averageDailySales;
@@ -2551,6 +2695,7 @@ async function refreshOnline(forceRefresh = false) {
     });
     onlineReportsExpired = onlineRecords.some(record => record.expiredStock > 0);
     updateSkuCategoryOptions();
+    updateForecastStatusOptions();
     recordSyncTime('online', response);
     onlineState = 'ready';
   } catch (error) {

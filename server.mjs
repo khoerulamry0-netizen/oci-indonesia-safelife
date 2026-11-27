@@ -23,6 +23,7 @@ const onlineSpreadsheetId = '1Sc4y1_fIfWSIYarB_dasBIP4TO0EjBlnzZ09ted62UU';
 const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
 const onlineParetoGid = '1197311588';
+const onlineForecastGid = '1008501006'; // Tab "Additional Qty Forecast online"
 const onlineSkuCategorySheetName = 'SKU CATEGORY';
 const offlineParetoGid = '616754166';
 const offlineForecastGid = '2026112701'; // Tab "Additional Qty Forecast offline"
@@ -391,6 +392,7 @@ function buildOfflineForecastMap(rows) {
   if (headerIndex < 0) throw new Error('Additional Qty Forecast offline headers not found');
 
   const params = {
+    unit: 'days',
     leadTimeDays: null,
     safetyStockDays: null,
     minStockDays: null,
@@ -436,6 +438,72 @@ function buildOfflineForecastMap(rows) {
     });
   }
   if (!map.size) throw new Error('Additional Qty Forecast offline returned no usable rows');
+  return { params, map };
+}
+
+function buildOnlineForecastMap(rows) {
+  const headerIndex = findHeader(rows, ['SKU', 'Additional Qty Forecast (pcs)']);
+  if (headerIndex < 0) throw new Error('Additional Qty Forecast online headers not found');
+
+  const params = {
+    unit: 'weeks',
+    leadTimeWeeks: null,
+    safetyStockWeeks: null,
+    minStockWeeks: null,
+    maxStockWeeks: null,
+  };
+  for (const row of rows.slice(0, headerIndex)) {
+    for (let i = 0; i < row.length; i += 1) {
+      const label = normalized(row[i]);
+      let targetKey = null;
+      if (label === 'lead time (minggu)') targetKey = 'leadTimeWeeks';
+      else if (label === 'safety stock (minggu)') targetKey = 'safetyStockWeeks';
+      else if (label === 'target max stock (minggu)') targetKey = 'maxStockWeeks';
+      if (!targetKey) continue;
+      for (let j = i + 1; j < row.length; j += 1) {
+        const val = parseOptionalNumber(row[j]);
+        if (val !== null) {
+          params[targetKey] = val;
+          break;
+        }
+      }
+    }
+  }
+  if (params.leadTimeWeeks !== null && params.safetyStockWeeks !== null) {
+    params.minStockWeeks = params.leadTimeWeeks + params.safetyStockWeeks;
+  }
+
+  const header = rows[headerIndex];
+  const skuIndex = columnIndex(header, 'SKU');
+  const ltdIndex = columnIndex(header, 'Kebutuhan Lead Time (pcs)');
+  const ssIndex = columnIndex(header, 'Safety Stock (pcs)');
+  const minIndex = columnIndex(header, 'Stok Minimum (pcs)');
+  const maxIndex = columnIndex(header, 'Stok Maksimum (pcs)');
+  const statusIndex = columnIndex(header, 'Status Stok');
+  const addQtyIndex = columnIndex(header, 'Additional Qty Forecast (pcs)');
+  const orderValIndex = columnIndex(header, 'Estimasi Nilai Order (Rp)');
+  const qtyPerCtnIndex = columnIndex(header, 'Qty / Karton (pcs)');
+  const addCtnIndex = columnIndex(header, 'Additional Qty (Karton)');
+
+  const map = new Map();
+  for (const row of rows.slice(headerIndex + 1)) {
+    const sku = skuKey(row[skuIndex]);
+    if (!sku || map.has(sku)) continue;
+    const rawStatus = statusIndex >= 0 ? String(row[statusIndex] ?? '').trim() : '';
+    map.set(sku, {
+      leadTimeDemand: ltdIndex >= 0 ? parseOptionalNumber(row[ltdIndex]) : null,
+      safetyStock: ssIndex >= 0 ? parseOptionalNumber(row[ssIndex]) : null,
+      minStockLevel: minIndex >= 0 ? parseOptionalNumber(row[minIndex]) : null,
+      maxStockLevel: maxIndex >= 0 ? parseOptionalNumber(row[maxIndex]) : null,
+      reorderPoint: null,
+      additionalQty: addQtyIndex >= 0 ? parseOptionalNumber(row[addQtyIndex]) : null,
+      forecastStatus: rawStatus || null,
+      forecastOrderValue: orderValIndex >= 0 ? parseRupiah(row[orderValIndex]) : null,
+      qtyPerCtn: qtyPerCtnIndex >= 0 ? parseOptionalNumber(row[qtyPerCtnIndex]) : null,
+      additionalCtn: addCtnIndex >= 0 ? parseOptionalNumber(row[addCtnIndex]) : null,
+    });
+  }
+  if (!map.size) throw new Error('Additional Qty Forecast online returned no usable rows');
   return { params, map };
 }
 
@@ -687,12 +755,13 @@ async function loadOfflineData() {
 }
 
 async function loadOnlineData() {
-  const [response, costRows, summaryRows, paretoRows, categoryRows] = await Promise.all([
+  const [response, costRows, summaryRows, paretoRows, categoryRows, forecastRows] = await Promise.all([
     fetchWithTimeout(upstream, { headers: { accept: 'application/json' } }),
     fetchCsv(masterCostGid, onlineSpreadsheetId),
     fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
     fetchCsv(onlineParetoGid, onlineSpreadsheetId),
     fetchSheetCsv(onlineSkuCategorySheetName, onlineSpreadsheetId),
+    fetchCsv(onlineForecastGid, onlineSpreadsheetId),
   ]);
   if (!response.ok) throw new Error('Upstream returned ' + response.status);
   const rows = JSON.parse(await response.text());
@@ -701,9 +770,11 @@ async function loadOnlineData() {
   const averages = buildOnlineAverageMap(summaryRows);
   const pareto = buildParetoMap(paretoRows);
   const skuCategories = buildSkuCategoryMap(categoryRows);
+  const forecast = buildOnlineForecastMap(forecastRows);
   const enriched = rows.map(row => {
     const key = skuKey(row.sku);
     const paretoEntry = pareto.get(key);
+    const fc = forecast.map.get(key);
     const summaryWeekly = averages.has(key) ? averages.get(key) : null;
     const paretoWeekly = paretoEntry?.exactWeekly ?? null;
     const weekly = summaryWeekly !== null
@@ -722,9 +793,22 @@ async function loadOnlineData() {
       paretoStatus: paretoEntry?.status ?? null,
       paretoContribution: paretoEntry?.contribution ?? null,
       paretoRank: paretoEntry?.rank ?? null,
+      leadTimeDemand: fc?.leadTimeDemand ?? null,
+      safetyStock: fc?.safetyStock ?? null,
+      minStockLevel: fc?.minStockLevel ?? null,
+      maxStockLevel: fc?.maxStockLevel ?? null,
+      reorderPoint: fc?.reorderPoint ?? null,
+      additionalQty: fc?.additionalQty ?? null,
+      forecastStatus: fc?.forecastStatus ?? null,
+      forecastOrderValue: fc?.forecastOrderValue ?? null,
+      qtyPerCtn: fc?.qtyPerCtn ?? null,
+      additionalCtn: fc?.additionalCtn ?? null,
     };
   });
-  return enriched;
+  return {
+    forecastParams: forecast.params,
+    records: enriched,
+  };
 }
 
 async function serveStatic(res, pathname) {
