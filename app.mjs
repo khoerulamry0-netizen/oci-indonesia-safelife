@@ -1141,6 +1141,7 @@ const forecastStatusOrder = [
   'OK',
   'OVERSTOCK',
   'STOK PASIF',
+  'NO ORDER',
 ];
 
 function updateForecastStatusOptions() {
