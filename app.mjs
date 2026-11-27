@@ -21,6 +21,7 @@ const translations = {
     active_sku_sub: 'SKU aktif terpantau',
     quick_all: 'Semua',
     quick_at_risk: 'Berisiko',
+    quick_ed_30: 'ED ≤ 30h',
     quick_ed_90: 'ED ≤ 90h',
     quick_ed_180: 'ED ≤ 180h',
     quick_active: 'Active',
@@ -266,6 +267,7 @@ const translations = {
     active_sku_sub: 'Active monitored SKUs',
     quick_all: 'All',
     quick_at_risk: 'At risk',
+    quick_ed_30: 'ED ≤ 30d',
     quick_ed_90: 'ED ≤ 90d',
     quick_ed_180: 'ED ≤ 180d',
     quick_active: 'Active',
@@ -1594,6 +1596,7 @@ function updateQuickFilterCounts() {
   const counts = {
     all: base.length,
     'at-risk': base.filter(record => statusOf(record)[1] === 'at-risk').length,
+    ed30: base.filter(record => matchesExpiryRange(record.daysLeft, '0-30')).length,
     ed90: base.filter(record => matchesExpiryRange(record.daysLeft, '0-90')).length,
     ed180: base.filter(record => matchesExpiryRange(record.daysLeft, '0-180')).length,
     active: base.filter(record => record.channel === 'Offline' && record.isActive === true).length,
@@ -1627,6 +1630,7 @@ function syncQuickFilterPills() {
     if (anyExtra) return null;
     if (!riskFilter.value && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'all';
     if (riskFilter.value === 'at-risk' && !expiryRangeFilter.value && !paretoFilter.value && !skuStatusFilter.value) return 'at-risk';
+    if (!riskFilter.value && expiryRangeFilter.value === '0-30' && !paretoFilter.value && !skuStatusFilter.value) return 'ed30';
     if (!riskFilter.value && expiryRangeFilter.value === '0-90' && !paretoFilter.value && !skuStatusFilter.value) return 'ed90';
     if (!riskFilter.value && expiryRangeFilter.value === '0-180' && !paretoFilter.value && !skuStatusFilter.value) return 'ed180';
     if (!riskFilter.value && !expiryRangeFilter.value && paretoFilter.value === 'Pareto 80%' && !skuStatusFilter.value) return 'pareto';
@@ -2441,6 +2445,7 @@ for (const button of quickButtons) {
     pendingForecastStatus = '';
     for (const { select } of filterDescriptors) select.value = '';
     if (mode === 'at-risk') riskFilter.value = 'at-risk';
+    if (mode === 'ed30') expiryRangeFilter.value = '0-30';
     if (mode === 'ed90') expiryRangeFilter.value = '0-90';
     if (mode === 'ed180') expiryRangeFilter.value = '0-180';
     if (mode === 'pareto') paretoFilter.value = 'Pareto 80%';
