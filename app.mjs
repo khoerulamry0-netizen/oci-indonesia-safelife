@@ -210,6 +210,7 @@ const translations = {
     batch_risk_value: 'Modal risiko',
     click_to_filter: 'Klik untuk memfilter',
     view_details: 'Detail',
+    clear_search: 'Hapus pencarian',
   },
   en: {
     brand_title: 'Marketing Control',
@@ -420,6 +421,7 @@ const translations = {
     batch_risk_value: 'Risk value',
     click_to_filter: 'Click to filter',
     view_details: 'Details',
+    clear_search: 'Clear search',
   },
 };
 
@@ -497,6 +499,7 @@ function recordSyncTime(key, response) {
 }
 
 const search = getEl('search');
+const searchClear = getEl('search-clear');
 const filterButtons = getQsAll('#filters button');
 const quickButtons = getQsAll('#quick-filters button');
 const tableRows = getEl('rows');
@@ -1882,6 +1885,7 @@ function draw() {
   renderInsights(visible, totalRiskValue);
 
   getEl('result-count').textContent = t('result_count').replace('{count}', number.format(visible.length));
+  if (searchClear) searchClear.hidden = search.value.length === 0;
   updateQuickFilterCounts();
   syncQuickFilterPills();
   renderActiveChips();
@@ -2168,6 +2172,16 @@ mobileInventory.addEventListener('change', () => {
 search.addEventListener('input', () => {
   resetPagination();
   draw();
+});
+search.addEventListener('search', () => {
+  resetPagination();
+  draw();
+});
+searchClear?.addEventListener('click', () => {
+  search.value = '';
+  resetPagination();
+  draw();
+  search.focus();
 });
 exportExcelButton.addEventListener('click', exportExcelFile);
 mobileExportExcelButton?.addEventListener('click', () => {

@@ -108,11 +108,14 @@
 
       <div class="inventory-controls">
         <div class="control-bar">
-          <label class="search">
+          <div class="search">
             <svg class="search-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <span class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</span>
+            <label for="search" class="sr-only" data-i18n="search_label">Cari SKU atau nama produk</label>
             <input id="search" type="search" placeholder="Cari SKU atau nama produk">
-          </label>
+            <button type="button" id="search-clear" class="search-clear" hidden aria-label="Hapus pencarian" data-i18n-aria="clear_search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
 
           <div class="quick-filters-wrap">
             <div class="quick-filters" id="quick-filters" role="group" aria-label="Filter cepat">
