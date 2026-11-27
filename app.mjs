@@ -70,7 +70,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · estimasi FEFO',
     incomplete_sales: 'Data sales belum lengkap',
     inventory_title: 'Daftar stok',
-    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup serta rencana restock dari tab Additional Qty Forecast online. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang & Provisi dari tab Active SKU offline, serta rencana restock dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.',
+    inventory_description: 'Online memakai 13 minggu shipment terakhir yang sudah tutup, status SKU dari tab ACTIVE SKU ONLINE, serta rencana restock khusus SKU aktif dari tab Additional Qty Forecast online. Offline membaca tab CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE dari tab Stock cover offline, status Pareto dari tab PARETO OFFLINE, Status Barang & Provisi dari tab Active SKU offline, serta rencana restock khusus SKU aktif dari tab Additional Qty Forecast offline. Cost kedua channel dipetakan dari tab Master Cost.',
     search_label: 'Cari SKU atau nama produk',
     search_placeholder: 'Cari SKU atau nama produk…',
     online: 'Online',
@@ -104,7 +104,7 @@ const translations = {
     all_stock_cover: 'Semua cover',
     sku_category_filter: 'Kategori SKU',
     all_sku_categories: 'Semua kategori',
-    sku_status_filter: 'Status SKU Offline',
+    sku_status_filter: 'Status SKU',
     active_sku_only: 'Active & New',
     inactive_sku_only: 'Inactive (Deleted / Discontinue)',
     status_active_exact: 'Active',
@@ -316,7 +316,7 @@ const translations = {
     urgent_expiry_detail: 'pcs · FEFO estimate',
     incomplete_sales: 'Incomplete sales data',
     inventory_title: 'Inventory list',
-    inventory_description: 'Online uses the latest 13 closed shipment weeks and restock planning from the Additional Qty Forecast online tab. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, Item & Provision status from the Active SKU offline tab, and restock planning from the Additional Qty Forecast offline tab. Cost for both channels is mapped from the Master Cost tab.',
+    inventory_description: 'Online uses the latest 13 closed shipment weeks, SKU active status from ACTIVE SKU ONLINE, and active-only restock planning from the Additional Qty Forecast online tab. Offline reads CLUSTERING OFFLINE, Monthly AVG, OOS FILTER & SWC NOTE from the Stock cover offline tab, Pareto status from the PARETO OFFLINE tab, Item & Provision status from the Active SKU offline tab, and active-only restock planning from the Additional Qty Forecast offline tab. Cost for both channels is mapped from the Master Cost tab.',
     search_label: 'Search SKU or product name',
     search_placeholder: 'Search SKU or product name…',
     online: 'Online',
@@ -350,7 +350,7 @@ const translations = {
     all_stock_cover: 'All cover periods',
     sku_category_filter: 'SKU category',
     all_sku_categories: 'All categories',
-    sku_status_filter: 'Offline SKU status',
+    sku_status_filter: 'SKU status',
     active_sku_only: 'Active & New',
     inactive_sku_only: 'Inactive (Deleted / Discontinue)',
     status_active_exact: 'Active',
@@ -787,7 +787,6 @@ function setChannel(nextChannel) {
     skuCategoryFilter.value = '';
     pendingCategory = '';
   } else {
-    skuStatusFilter.value = '';
     oosFilter.value = '';
     swcNoteFilter.value = '';
     provisionFilter.value = '';
@@ -1194,8 +1193,6 @@ function updateSkuCategoryVisibility() {
   skuCategoryFilter.disabled = !showCategory;
 
   const isOffline = channel === 'Offline';
-  skuStatusPicker.hidden = !isOffline;
-  skuStatusFilter.disabled = !isOffline;
   oosFilterPicker.hidden = !isOffline;
   oosFilter.disabled = !isOffline;
   swcNotePicker.hidden = !isOffline;
@@ -1271,7 +1268,7 @@ function visibleRecords() {
     .filter(record => !stockCoverFilter.value || rangeBand(record.stockCoverDays) === stockCoverFilter.value)
     .filter(record => channel === 'Offline' || !skuCategoryFilter.value || record.skuCategory === skuCategoryFilter.value)
     .filter(record => {
-      if (channel !== 'Offline' || !skuStatusFilter.value) return true;
+      if (!skuStatusFilter.value) return true;
       if (skuStatusFilter.value === 'active') return record.isActive === true;
       if (skuStatusFilter.value === 'inactive') return record.isActive === false;
       return record.itemStatus === skuStatusFilter.value;
@@ -1351,8 +1348,8 @@ function exportExcelFile() {
     const riskValue = pricedRiskValue(record);
     const stockValue = pricedStockValue(record);
     const [riskLabel] = statusOf(record);
-    const skuStatus = record.channel === 'Offline'
-      ? (record.itemStatus || (record.isActive ? t('active_sku_only') : t('inactive_sku_only')))
+    const skuStatus = typeof record.isActive === 'boolean'
+      ? (record.itemStatus || (record.isActive ? t('active_sku_only') : t('inactive_tag')))
       : '—';
     return [
       record.name,
@@ -1477,28 +1474,26 @@ function buildProductMeta(record) {
     tag.textContent = record.skuCategory;
     meta.append(tag);
   }
-  if (record.channel === 'Offline') {
-    if (record.itemStatus === 'NEW') {
-      const tag = document.createElement('span');
-      tag.className = 'meta-tag meta-tag-new';
-      tag.textContent = t('new_tag');
-      meta.append(tag);
-    } else if (record.itemStatus === 'DISCONTINUE') {
-      const tag = document.createElement('span');
-      tag.className = 'meta-tag meta-tag-inactive';
-      tag.textContent = t('discontinue_tag');
-      meta.append(tag);
-    } else if (record.itemStatus === 'DELETED') {
-      const tag = document.createElement('span');
-      tag.className = 'meta-tag meta-tag-inactive';
-      tag.textContent = t('deleted_tag');
-      meta.append(tag);
-    } else if (record.isActive === false) {
-      const tag = document.createElement('span');
-      tag.className = 'meta-tag meta-tag-inactive';
-      tag.textContent = t('inactive_tag');
-      meta.append(tag);
-    }
+  if (record.itemStatus === 'NEW') {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-new';
+    tag.textContent = t('new_tag');
+    meta.append(tag);
+  } else if (record.itemStatus === 'DISCONTINUE') {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-inactive';
+    tag.textContent = t('discontinue_tag');
+    meta.append(tag);
+  } else if (record.itemStatus === 'DELETED') {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-inactive';
+    tag.textContent = t('deleted_tag');
+    meta.append(tag);
+  } else if (record.isActive === false) {
+    const tag = document.createElement('span');
+    tag.className = 'meta-tag meta-tag-inactive';
+    tag.textContent = t('inactive_tag');
+    meta.append(tag);
   }
   if (record.channel === 'Offline' && record.oosFilter === 'OOS') {
     const tag = document.createElement('span');
@@ -1926,8 +1921,10 @@ function buildSkuSummaryText(record) {
     `ED terdekat: ${firstExp ? date.format(firstExp.date) + ' (' + number.format(firstExp.days) + ' hari lagi)' : '—'}`,
     `Status: ${statusLabel}`,
   ];
+  if (typeof record.isActive === 'boolean') {
+    lines.push(`Status Barang: ${record.itemStatus || (record.isActive ? 'ACTIVE' : 'Inactive')}`);
+  }
   if (record.channel === 'Offline') {
-    if (record.itemStatus) lines.push(`Status Barang: ${record.itemStatus}`);
     if (record.provisionStatus) {
       const provRp = Number.isFinite(record.provisionValue) && record.provisionValue > 0
         ? ` (${formatRupiah(record.provisionValue)})`

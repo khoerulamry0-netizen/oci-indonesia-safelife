@@ -24,6 +24,7 @@ const onlineSummaryGid = '1008501005';
 const masterCostGid = '686994777';
 const onlineParetoGid = '1197311588';
 const onlineForecastGid = '1008501006'; // Tab "Additional Qty Forecast online"
+const activeSkuOnlineGid = '286827248'; // Tab "ACTIVE SKU ONLINE"
 const onlineSkuCategorySheetName = 'SKU CATEGORY';
 const offlineParetoGid = '616754166';
 const offlineForecastGid = '2026112701'; // Tab "Additional Qty Forecast offline"
@@ -509,22 +510,39 @@ function buildOnlineForecastMap(rows) {
 
 function buildActiveSkuMap(rows) {
   let headerIndex = findHeader(rows, ['SKU', 'Status Barang']);
+  let skuColumnName = 'SKU';
   let statusColumnName = 'Status Barang';
   let useItemStatusSchema = headerIndex >= 0;
 
   if (headerIndex < 0) {
+    headerIndex = findHeader(rows, ['SKU ID', 'STATUS']);
+    skuColumnName = 'SKU ID';
+    statusColumnName = 'STATUS';
+    useItemStatusSchema = headerIndex >= 0;
+  }
+
+  if (headerIndex < 0) {
+    headerIndex = findHeader(rows, ['SKU', 'STATUS']);
+    skuColumnName = 'SKU';
+    statusColumnName = 'STATUS';
+    useItemStatusSchema = headerIndex >= 0;
+  }
+
+  if (headerIndex < 0) {
     headerIndex = findHeader(rows, ['SKU', 'Active Status']);
+    skuColumnName = 'SKU';
     statusColumnName = 'Active Status';
   }
 
   if (headerIndex < 0) {
     headerIndex = findHeader(rows, ['SKU', 'Note']);
+    skuColumnName = 'SKU';
     statusColumnName = 'Note';
   }
 
-  if (headerIndex < 0) throw new Error('Active SKU Offline headers not found');
+  if (headerIndex < 0) throw new Error('Active SKU headers not found');
   const header = rows[headerIndex];
-  const skuIndex = columnIndex(header, 'SKU');
+  const skuIndex = columnIndex(header, skuColumnName);
   const statusIndex = columnIndex(header, statusColumnName);
   const firstArrivalIndex = columnIndex(header, 'Tanggal Pertama Datang');
   const provisionStatusIndex = columnIndex(header, 'Status Provisi');
@@ -547,7 +565,7 @@ function buildActiveSkuMap(rows) {
       provisionValue: provisionValueIndex >= 0 ? parseRupiah(row[provisionValueIndex]) : null,
     });
   }
-  if (!activeMap.size) throw new Error('Active SKU Offline returned no usable rows');
+  if (!activeMap.size) throw new Error('Active SKU sheet returned no usable rows');
   return activeMap;
 }
 
@@ -755,13 +773,14 @@ async function loadOfflineData() {
 }
 
 async function loadOnlineData() {
-  const [response, costRows, summaryRows, paretoRows, categoryRows, forecastRows] = await Promise.all([
+  const [response, costRows, summaryRows, paretoRows, categoryRows, forecastRows, activeSkuRows] = await Promise.all([
     fetchWithTimeout(upstream, { headers: { accept: 'application/json' } }),
     fetchCsv(masterCostGid, onlineSpreadsheetId),
     fetchCsv(onlineSummaryGid, onlineSpreadsheetId),
     fetchCsv(onlineParetoGid, onlineSpreadsheetId),
     fetchSheetCsv(onlineSkuCategorySheetName, onlineSpreadsheetId),
     fetchCsv(onlineForecastGid, onlineSpreadsheetId),
+    fetchCsv(activeSkuOnlineGid, onlineSpreadsheetId),
   ]);
   if (!response.ok) throw new Error('Upstream returned ' + response.status);
   const rows = JSON.parse(await response.text());
@@ -771,10 +790,12 @@ async function loadOnlineData() {
   const pareto = buildParetoMap(paretoRows);
   const skuCategories = buildSkuCategoryMap(categoryRows);
   const forecast = buildOnlineForecastMap(forecastRows);
+  const activeSkuMap = buildActiveSkuMap(activeSkuRows);
   const enriched = rows.map(row => {
     const key = skuKey(row.sku);
     const paretoEntry = pareto.get(key);
-    const fc = forecast.map.get(key);
+    const activeFields = activeStatusFields(activeSkuMap.get(key));
+    const fc = activeFields.isActive === true ? forecast.map.get(key) : null;
     const summaryWeekly = averages.has(key) ? averages.get(key) : null;
     const paretoWeekly = paretoEntry?.exactWeekly ?? null;
     const weekly = summaryWeekly !== null
@@ -785,6 +806,8 @@ async function loadOnlineData() {
       : summaryWeekly;
     return {
       ...row,
+      isActive: activeFields.isActive,
+      itemStatus: activeFields.itemStatus,
       productCost: costs.get(key) ?? null,
       skuCategory: skuCategories.get(normalized(row.sku).toUpperCase()) ?? null,
       averageWeeklySales: weekly,
